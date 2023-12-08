@@ -1,0 +1,19 @@
+name: Deploy to host
+on:
+  registry_package:
+    types: [published]
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04-node
+    steps:
+      - name: SSH into Docker Host
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd kon && docker compose pull && \
+            docker compose up -d --remove-orphans && docker image prune -f
