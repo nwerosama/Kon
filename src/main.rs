@@ -13,15 +13,13 @@ async fn on_ready(
 ) -> Result<(), Error> {
   println!("Connected to API as {}", ready.user.name);
 
-  serenity::ChannelId(865673694184996888).send_message(&ctx.http, |m| {
-    m.embed(|e|
-      e.color(COLOR)
-        .thumbnail(ready.user.avatar_url().unwrap_or_default())
-        .author(|a|
-          a.name(format!("{} is ready!", ready.user.name))
-        )
-    )
-  }).await?;
+  serenity::ChannelId(865673694184996888).send_message(&ctx.http, |m| m.embed(|e|
+    e.color(COLOR)
+      .thumbnail(ready.user.avatar_url().unwrap_or_default())
+      .author(|a|
+        a.name(format!("{} is ready!", ready.user.name))
+      )
+  )).await?;
 
   let register_commands = std::env::var("REGISTER_CMDS").unwrap_or_else(|_| String::from("true")).parse::<bool>().unwrap_or(true);
 
