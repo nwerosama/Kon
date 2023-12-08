@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  bot:
+    container_name: Kon
+    image: 'git.toast-server.net/toast/kon:main'
+    build: .
+    env_file:
+      - .env
+    restart: unless-stopped

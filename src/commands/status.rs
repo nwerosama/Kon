@@ -1,73 +1,48 @@
-use crate::Error;
+use crate::{Error, COLOR};
 
 use reqwest::get;
 use std::collections::HashMap;
 use serde_json::Value;
+use tokio::join;
 
 lazy_static::lazy_static! {
   static ref PMS_BASE: String = std::env::var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found");
 }
 
-/// Retrieve the server data from Wargaming
-#[poise::command(slash_command, subcommands("asia", "europe"))]
-pub async fn status(_ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
-  Ok(())
-}
-
-/// Check the server status for Asia server
+/// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
-pub async fn asia(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
-  let asia_pms = &PMS_BASE;
-  let servers = pms_serverstatus(&asia_pms).await?;
+pub async fn status(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+  let pms_asia = &PMS_BASE;
+  let pms_eu = PMS_BASE.replace("asia", "eu");
 
-  let mut fields = Vec::new();
+  let (servers_asia, servers_eu) = join!(pms_serverstatus(&pms_asia), pms_serverstatus(&pms_eu));
 
-  for server in servers {
+  let mut embed_fields = Vec::new();
+  for server in servers_eu.unwrap() {
     let name = server["name"].as_str().unwrap().to_owned();
     let status = match server["availability"].as_str().unwrap() {
       "1" => "Online",
       "-1" => "Offline",
       _ => "Unknown"
     };
-    fields.push((name, status, true));
+    embed_fields.push((name, status, true));
   }
 
-  ctx.send(|m|
-    m.embed(|e| {
-      e.color(crate::COLOR)
-        .title("World of Tanks Asia Status")
-        .fields(fields)
-    })
-  ).await?;
-
-  Ok(())
-}
-
-/// Check the server status for EU servers
-#[poise::command(slash_command)]
-pub async fn europe(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
-  let eu_pms = PMS_BASE.replace("asia", "eu");
-  let servers = pms_serverstatus(&eu_pms).await?;
-
-  let mut fields = Vec::new();
-
-  for server in servers {
+  for server in servers_asia.unwrap() {
     let name = server["name"].as_str().unwrap().to_owned();
     let status = match server["availability"].as_str().unwrap() {
       "1" => "Online",
       "-1" => "Offline",
       _ => "Unknown"
     };
-    fields.push((name, status, true));
+    embed_fields.push((name, status, true));
   }
 
-  ctx.send(|m|
-    m.embed(|e| {
-      e.color(crate::COLOR)
-        .title("World of Tanks Europe Status")
-        .fields(fields)
-    })
-  ).await?;
+  ctx.send(|m| m.embed(|e|
+    e.color(COLOR)
+      .title("World of Tanks Server Status")
+      .fields(embed_fields)
+  )).await?;
 
   Ok(())
 }
