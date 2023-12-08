@@ -18,15 +18,15 @@ jobs:
           apt update
           apt install -y docker-ce docker-ce-cli containerd.io
       - name: Checkout branch
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - name: Login to Gitea
-        uses: docker/login-action@v3
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3
         with:
           registry: git.toast-server.net
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Build and push image
-        uses: docker/build-push-action@v5.1.0
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
           context: .
           file: Dockerfile
