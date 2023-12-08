@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-22.04-node
     steps:
       - name: SSH into Docker Host
-        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+        uses: appleboy/ssh-action@4330a1ea489ced98a6778fb35bb6bfed8b61fca5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
