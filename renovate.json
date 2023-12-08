@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "default:automergeDigest",
+    "default:automergeBranchPush",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "commitBody": "PR created by Renovate Bot.",
+  "timezone": "Australia/Sydney",
+  "vulnerabilityAlerts": {
+    "groupName": "renovate-security",
+    "schedule": ["before 11pm every day"],
+    "dependencyDashboardApproval": false,
+    "minimumReleaseAge": "1h",
+    "rangeStrategy": "update-lockfile",
+    "commitMessageSuffix": "[SECURITY]",
+    "branchTopic": "{{{datasource}}}-{{{depName}}}-vulnerability",
+    "prCreation": "immediate"
+  },
+  "pinDigests": true,
+  "ignoreTests": true,
+  "pruneStaleBranches": true,
+  "pruneBranchAfterAutomerge": true,
+  "automerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "automergeSchedule": [
+    "at any time"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["cargo"],
+      "enabled": true
+    }
+  ]
+}
