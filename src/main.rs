@@ -55,7 +55,11 @@ async fn main() {
         commands::status::status()
       ],
       pre_command: |ctx| Box::pin(async move {
-        println!("{} ran /{}", ctx.author().name, ctx.command().qualified_name)
+        let get_guild_name = match ctx.guild() {
+          Some(guild) => guild.name.clone(),
+          None => String::from("DM")
+        };
+        println!("[{}] {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name)
       }),
       ..Default::default()
     }).setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
