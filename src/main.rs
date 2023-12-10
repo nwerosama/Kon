@@ -62,7 +62,8 @@ async fn main() {
         println!("[{}] {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name)
       }),
       ..Default::default()
-    }).setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
+    })
+    .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
     .build().await.expect("Error while building the client");
 
   if let Err(why) = client.start().await {
