@@ -1,6 +1,7 @@
 use crate::{Error, COLOR};
 
-use reqwest::get;
+use cargo_toml::Manifest;
+use reqwest::{Client, header::USER_AGENT};
 use std::collections::HashMap;
 use serde_json::Value;
 use tokio::join;
@@ -48,7 +49,14 @@ pub async fn status(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
 }
 
 async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
-  let response = get(url).await?.json::<HashMap<String, Value>>().await?;
+  let bot_version = Manifest::from_path("Cargo.toml").unwrap().package.unwrap().version.unwrap();
+
+  let client = Client::new();
+  let req = client.get(url)
+    .header(USER_AGENT, format!("Kon/{}/Rust", bot_version))
+    .send()
+    .await?;
+  let response = req.json::<HashMap<String, Value>>().await?;
   let servers = response["data"].as_array().unwrap()[0]["servers_statuses"]["data"].as_array().unwrap().clone();
 
   Ok(servers)
