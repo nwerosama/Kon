@@ -14,7 +14,6 @@ use std::{
   env::var
 };
 
-#[allow(dead_code)] // Smh...
 fn query_server() -> Result<Response, Error> {
   let server_ip = var("ATS_SERVER_IP").expect("Expected a \"ATS_SERVER_IP\" in the envvar but none was found");
   let addr = SocketAddr::from_str(&server_ip).unwrap();
