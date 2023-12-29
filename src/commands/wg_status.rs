@@ -1,18 +1,24 @@
 use crate::{Error, COLOR};
 
+use reqwest::{
+  Client,
+  header::USER_AGENT
+};
+use std::{
+  collections::HashMap,
+  env::var
+};
 use cargo_toml::Manifest;
-use reqwest::{Client, header::USER_AGENT};
-use std::collections::HashMap;
 use serde_json::Value;
 use tokio::join;
 
 lazy_static::lazy_static! {
-  static ref PMS_BASE: String = std::env::var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found");
+  static ref PMS_BASE: String = var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found");
 }
 
 /// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
-pub async fn status(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+pub async fn wg_status(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let pms_asia = &PMS_BASE;
   let pms_eu = PMS_BASE.replace("asia", "eu");
 

@@ -52,7 +52,8 @@ async fn main() {
     .options(poise::FrameworkOptions {
       commands: vec![
         commands::ping::ping(),
-        commands::status::status()
+        commands::wg_status::wg_status(),
+        commands::ats_status::ats_status()
       ],
       pre_command: |ctx| Box::pin(async move {
         let get_guild_name = match ctx.guild() {
