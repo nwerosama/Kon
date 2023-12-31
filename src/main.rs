@@ -1,6 +1,7 @@
 mod commands;
 
 use poise::serenity_prelude::{self as serenity};
+use std::env::var;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
@@ -21,7 +22,7 @@ async fn on_ready(
       )
   )).await?;
 
-  let register_commands = std::env::var("REGISTER_CMDS").unwrap_or_else(|_| String::from("true")).parse::<bool>().unwrap_or(true);
+  let register_commands = var("REGISTER_CMDS").unwrap_or_else(|_| String::from("true")).parse::<bool>().unwrap_or(true);
 
   if register_commands {
     let builder = poise::builtins::create_application_commands(&framework.options().commands);
@@ -31,11 +32,9 @@ async fn on_ready(
     }).await;
 
     match commands {
-      Ok(cmdmap) => {
-        for command in cmdmap.iter() {
+      Ok(cmdmap) => for command in cmdmap.iter() {
           println!("Registered command globally: {}", command.name);
-        }
-      },
+        },
       Err(why) => println!("Error registering commands: {:?}", why)
     }
   }
@@ -45,15 +44,14 @@ async fn on_ready(
 
 #[tokio::main]
 async fn main() {
-  let token = std::env::var("DISCORD_TOKEN").expect("Expected a \"DISCORD_TOKEN\" in the envvar but none was found");
+  let token = var("DISCORD_TOKEN").expect("Expected a \"DISCORD_TOKEN\" in the envvar but none was found");
 
   let client = poise::Framework::builder().token(token)
-    .intents(serenity::GatewayIntents::MESSAGE_CONTENT | serenity::GatewayIntents::GUILDS)
+    .intents(serenity::GatewayIntents::GUILDS)
     .options(poise::FrameworkOptions {
       commands: vec![
         commands::ping::ping(),
-        commands::wg_status::wg_status(),
-        commands::ats_status::ats_status()
+        commands::status::status()
       ],
       pre_command: |ctx| Box::pin(async move {
         let get_guild_name = match ctx.guild() {
