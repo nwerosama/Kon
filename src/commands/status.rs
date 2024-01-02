@@ -18,13 +18,14 @@ use reqwest::{
   Client,
   header::USER_AGENT
 };
+use once_cell::sync::Lazy;
 use cargo_toml::Manifest;
 use serde_json::Value;
 use tokio::join;
 
-lazy_static::lazy_static! {
-  static ref PMS_BASE: String = var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found");
-}
+static PMS_BASE: Lazy<String> = Lazy::new(||
+  var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found")
+);
 
 fn query_server() -> Result<Response, Error> {
   let server_ip = var("ATS_SERVER_IP").expect("Expected a \"ATS_SERVER_IP\" in the envvar but none was found");
