@@ -27,7 +27,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Restore from cache
-        uses: actions/cache/restore@v3 # v3
+        uses: actions/cache/restore@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         id: restore-cache
         with:
           path: /tmp/.buildx-cache
@@ -45,7 +45,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
 
       - name: Save to cache
-        uses: actions/cache/save@v3 # v3
+        uses: actions/cache/save@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         id: cache
         with:
           path: /tmp/.buildx-cache
