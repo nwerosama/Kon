@@ -5,7 +5,8 @@ use std::env::var;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
-pub static COLOR: i32 = 0x5a99c7;
+pub static EMBED_COLOR: i32 = 0x5a99c7;
+static BOT_READY_NOTIFY: u64 = 865673694184996888;
 
 async fn on_ready(
   ctx: &serenity::Context,
@@ -14,8 +15,8 @@ async fn on_ready(
 ) -> Result<(), Error> {
   println!("Connected to API as {}", ready.user.name);
 
-  serenity::ChannelId(865673694184996888).send_message(&ctx.http, |m| m.embed(|e|
-    e.color(COLOR)
+  serenity::ChannelId(BOT_READY_NOTIFY).send_message(&ctx.http, |m| m.embed(|e|
+    e.color(EMBED_COLOR)
       .thumbnail(ready.user.avatar_url().unwrap_or_default())
       .author(|a|
         a.name(format!("{} is ready!", ready.user.name))

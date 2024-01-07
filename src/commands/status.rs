@@ -1,4 +1,4 @@
-use crate::{Error, COLOR};
+use crate::{Error, EMBED_COLOR};
 
 use gamedig::protocols::{
   valve::{
@@ -82,7 +82,7 @@ pub async fn ats(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   match query_server() {
     Ok(response) => {
       ctx.send(|m| m.embed(|e|
-        e.color(COLOR)
+        e.color(EMBED_COLOR)
           .title("American Truck Simulator Server Status")
           .fields(vec![
             ("Name", format!("{}", response.info.name), true),
@@ -126,7 +126,7 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   }
 
   ctx.send(|m| m.embed(|e|
-    e.color(COLOR)
+    e.color(EMBED_COLOR)
       .title("World of Tanks Server Status")
       .fields(embed_fields)
   )).await?;
