@@ -36,3 +36,4 @@ jobs:
           push: true
           tags: git.toast-server.net/toast/kon:main
           cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=local,src=/tmp/.buildx-cache,mode=max
