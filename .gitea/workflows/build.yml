@@ -18,13 +18,6 @@ jobs:
           apt update
           apt install -y docker-ce docker-ce-cli containerd.io
 
-      - name: Set up build cache
-        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-buildx-
-
       - name: Checkout branch
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
@@ -38,8 +31,6 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
-          context: .
-          file: Dockerfile
           platforms: linux/amd64
           push: true
           tags: git.toast-server.net/toast/kon:main
