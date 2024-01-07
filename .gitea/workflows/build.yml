@@ -43,7 +43,7 @@ jobs:
           push: true
           tags: git.toast-server.net/toast/kon:main
           # cache-from: type=registry,ref=git.toast-server.net/toast/kon:main
-          # cache-to: type=inline
+          cache-to: type=local,dest=/tmp/.buildx-cache
 
       - name: Save to cache
         uses: actions/cache/save@v3 # v3
