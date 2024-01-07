@@ -19,10 +19,10 @@ jobs:
       #     apt install -y docker-ce docker-ce-cli containerd.io
 
       - name: Setup QEMU
-        uses: docker/setup-qemu-action # v3
+        uses: docker/setup-qemu-action@v3 # v3
 
       - name: Setup Docker
-        uses: docker/setup-buildx-action # v3
+        uses: docker/setup-buildx-action@v3 # v3
         with:
           platforms: linux/amd64
 
