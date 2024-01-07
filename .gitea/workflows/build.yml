@@ -30,6 +30,7 @@ jobs:
         uses: actions/cache/restore@v3 # v3
         id: restore-cache
         with:
+          path: /tmp/.buildx-cache
           key: docker-buildx-kon
 
       - name: Set up Docker Buildx
