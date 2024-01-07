@@ -30,26 +30,29 @@ jobs:
         uses: actions/cache/restore@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         id: restore-cache
         with:
-          path: /tmp/.buildx-cache
-          key: docker-buildx-kon-
+          path: |
+            /tmp/.buildx-cache
+            ~/.cargo
+            target
+          key: docker-buildx-kon-${{ runner.os }}
 
       - name: Cache cargo registry
         uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          key: docker-buildx-kon-${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo index
         uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+          key: docker-buildx-kon-${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
         uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         with:
           path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+          key: docker-buildx-kon-${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3
@@ -66,5 +69,8 @@ jobs:
         uses: actions/cache/save@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         id: cache
         with:
-          path: /tmp/.buildx-cache
-          key: docker-buildx-kon-${{ github.sha }}
+          path: |
+            /tmp/.buildx-cache
+            ~/.cargo
+            target
+          key: docker-buildx-kon-${{ runner.os }}
