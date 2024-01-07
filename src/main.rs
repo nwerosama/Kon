@@ -51,6 +51,7 @@ async fn main() {
     .options(poise::FrameworkOptions {
       commands: vec![
         commands::ping::ping(),
+        commands::uptime::uptime(),
         commands::status::status()
       ],
       pre_command: |ctx| Box::pin(async move {
