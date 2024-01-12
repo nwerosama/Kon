@@ -2,10 +2,14 @@ mod commands;
 
 use std::env::var;
 use poise::serenity_prelude::{self as serenity};
-use serenity::builder::{
-  CreateMessage,
-  CreateEmbed,
-  CreateEmbedAuthor
+use serenity::{
+  builder::{
+    CreateMessage,
+    CreateEmbed,
+    CreateEmbedAuthor
+  },
+  ClientBuilder,
+  GatewayIntents
 };
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -68,7 +72,7 @@ async fn main() {
     .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
     .build();
 
-  let mut client = serenity::ClientBuilder::new(token, serenity::GatewayIntents::GUILDS).framework(framework).await.expect("Error creating client");
+  let mut client = ClientBuilder::new(token, GatewayIntents::GUILDS).framework(framework).await.expect("Error creating client");
 
   if let Err(why) = client.start().await {
     println!("Client error: {:?}", why);

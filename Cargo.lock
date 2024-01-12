@@ -800,7 +800,7 @@ dependencies = [
 
 [[package]]
 name = "kon"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "cargo_toml",
  "gamedig",
