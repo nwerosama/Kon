@@ -18,6 +18,8 @@ use reqwest::{
   Client,
   header::USER_AGENT
 };
+use poise::CreateReply;
+use serenity::builder::CreateEmbed;
 use once_cell::sync::Lazy;
 use cargo_toml::Manifest;
 use serde_json::Value;
@@ -79,10 +81,11 @@ pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
 /// Retrieve the server status from ATS
 #[poise::command(slash_command)]
 pub async fn ats(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+  let embed = CreateEmbed::new().color(EMBED_COLOR);
   match query_server() {
     Ok(response) => {
-      ctx.send(|m| m.embed(|e|
-        e.color(EMBED_COLOR)
+      ctx.send(CreateReply::default()
+        .embed(embed
           .title("American Truck Simulator Server Status")
           .fields(vec![
             ("Name", format!("{}", response.info.name), true),
@@ -101,6 +104,7 @@ pub async fn ats(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
 pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let pms_asia = &PMS_BASE;
   let pms_eu = PMS_BASE.replace("asia", "eu");
+  let embed = CreateEmbed::new().color(EMBED_COLOR);
 
   let (servers_asia, servers_eu) = join!(pms_serverstatus(&pms_asia), pms_serverstatus(&pms_eu));
 
@@ -125,11 +129,7 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
     embed_fields.push((name, status, true));
   }
 
-  ctx.send(|m| m.embed(|e|
-    e.color(EMBED_COLOR)
-      .title("World of Tanks Server Status")
-      .fields(embed_fields)
-  )).await?;
+  ctx.send(CreateReply::default().embed(embed.title("World of Tanks Server Status").fields(embed_fields))).await?;
 
   Ok(())
 }

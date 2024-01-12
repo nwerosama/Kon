@@ -1,7 +1,12 @@
 mod commands;
 
-use poise::serenity_prelude::{self as serenity};
 use std::env::var;
+use poise::serenity_prelude::{self as serenity};
+use serenity::builder::{
+  CreateMessage,
+  CreateEmbed,
+  CreateEmbedAuthor
+};
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 
@@ -15,22 +20,19 @@ async fn on_ready(
 ) -> Result<(), Error> {
   println!("Connected to API as {}", ready.user.name);
 
-  serenity::ChannelId(BOT_READY_NOTIFY).send_message(&ctx.http, |m| m.embed(|e|
-    e.color(EMBED_COLOR)
-      .thumbnail(ready.user.avatar_url().unwrap_or_default())
-      .author(|a|
-        a.name(format!("{} is ready!", ready.user.name))
-      )
-  )).await?;
+  let message = CreateMessage::new();
+  let ready_embed = CreateEmbed::new()
+    .color(EMBED_COLOR)
+    .thumbnail(ready.user.avatar_url().unwrap_or_default())
+    .author(CreateEmbedAuthor::new(format!("{} is ready!", ready.user.name)).clone());
+
+  serenity::ChannelId::new(BOT_READY_NOTIFY).send_message(&ctx.http, message.add_embed(ready_embed)).await?;
 
   let register_commands = var("REGISTER_CMDS").unwrap_or_else(|_| String::from("true")).parse::<bool>().unwrap_or(true);
 
   if register_commands {
     let builder = poise::builtins::create_application_commands(&framework.options().commands);
-    let commands = serenity::Command::set_global_application_commands(&ctx.http, |commands| {
-      *commands = builder.clone();
-      commands
-    }).await;
+    let commands = serenity::Command::set_global_commands(&ctx.http, builder).await;
 
     match commands {
       Ok(cmdmap) => for command in cmdmap.iter() {
@@ -47,8 +49,7 @@ async fn on_ready(
 async fn main() {
   let token = var("DISCORD_TOKEN").expect("Expected a \"DISCORD_TOKEN\" in the envvar but none was found");
 
-  let client = poise::Framework::builder().token(token)
-    .intents(serenity::GatewayIntents::GUILDS)
+  let framework = poise::Framework::builder()
     .options(poise::FrameworkOptions {
       commands: vec![
         commands::ping::ping(),
@@ -65,7 +66,9 @@ async fn main() {
       ..Default::default()
     })
     .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
-    .build().await.expect("Error while building the client");
+    .build();
+
+  let mut client = serenity::ClientBuilder::new(token, serenity::GatewayIntents::GUILDS).framework(framework).await.expect("Error creating client");
 
   if let Err(why) = client.start().await {
     println!("Client error: {:?}", why);
