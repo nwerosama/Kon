@@ -5,7 +5,7 @@ WORKDIR /usr/src/kon
 COPY . .
 RUN cargo fetch && cargo build -r
 
-FROM alpine:3.19@sha256:51b67269f354137895d43f3b3d810bfacd3945438e94dc5ac55fdac340352f48
+FROM alpine:3.19@sha256:b5dfcf7427d7ba35bd7eb083754c14008e50fc80b00a42b55946ccbc2cc6322a
 RUN apk add --no-cache openssl-dev libgcc
 WORKDIR /kon
 COPY --from=compiler /usr/src/kon/target/release/kon .
