@@ -1,6 +1,6 @@
 [package]
 name = "kon"
-version = "0.1.11"
+version = "0.1.12"
 rust-version = "1.74"
 edition = "2021"
 

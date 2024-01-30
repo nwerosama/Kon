@@ -31,6 +31,17 @@ impl DatabaseController {
       );
     ").await?;
 
+    // Gameservers
+    client.batch_execute("
+      CREATE TABLE IF NOT EXISTS gameservers (
+        server_name VARCHAR(255) NOT NULL PRIMARY KEY,
+        game_name VARCHAR(255) NOT NULL,
+        guild_owner BIGINT NOT NULL,
+        guild_channel BIGINT NOT NULL,
+        ip_address VARCHAR(255) NOT NULL
+      );
+    ").await?;
+
     Ok(DatabaseController { client })
   }
 }
