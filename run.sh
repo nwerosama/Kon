@@ -1,3 +1,3 @@
 #!/bin/bash
 
-export $(cat .env | xargs) && cargo run
+export $(grep -v '^#' .env | xargs) && cargo run

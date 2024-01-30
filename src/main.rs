@@ -1,25 +1,32 @@
 mod commands;
+mod controllers;
+mod models;
 
-use std::env::var;
 use poise::serenity_prelude::{self as serenity};
+use std::{
+  env::var,
+  error
+};
 use serenity::{
   builder::{
     CreateMessage,
     CreateEmbed,
     CreateEmbedAuthor
   },
+  Context,
+  Ready,
   ClientBuilder,
   GatewayIntents
 };
 
-type Error = Box<dyn std::error::Error + Send + Sync>;
+type Error = Box<dyn error::Error + Send + Sync>;
 
 pub static EMBED_COLOR: i32 = 0x5a99c7;
 static BOT_READY_NOTIFY: u64 = 865673694184996888;
 
 async fn on_ready(
-  ctx: &serenity::Context,
-  ready: &serenity::Ready,
+  ctx: &Context,
+  ready: &Ready,
   framework: &poise::Framework<(), Error>
 ) -> Result<(), Error> {
   println!("Connected to API as {}", ready.user.name);
@@ -52,6 +59,7 @@ async fn on_ready(
 #[tokio::main]
 async fn main() {
   let token = var("DISCORD_TOKEN").expect("Expected a \"DISCORD_TOKEN\" in the envvar but none was found");
+  let db = controllers::database::DatabaseController::new().await.expect("Failed to connect to database");
 
   let framework = poise::Framework::builder()
     .options(poise::FrameworkOptions {
@@ -67,12 +75,20 @@ async fn main() {
         };
         println!("[{}] {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name)
       }),
+      initialize_owners: true,
       ..Default::default()
     })
     .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
     .build();
 
-  let mut client = ClientBuilder::new(token, GatewayIntents::GUILDS).framework(framework).await.expect("Error creating client");
+  let mut client = ClientBuilder::new(token, GatewayIntents::GUILDS)
+    .framework(framework)
+    .await.expect("Error creating client");
+
+  {
+    let mut data = client.data.write().await;
+    data.insert::<controllers::database::DatabaseController>(db);
+  }
 
   if let Err(why) = client.start().await {
     println!("Client error: {:?}", why);

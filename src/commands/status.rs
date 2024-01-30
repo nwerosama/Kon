@@ -1,11 +1,15 @@
-use crate::{Error, EMBED_COLOR};
+use crate::{
+  models::mpservers::MPServers,
+  EMBED_COLOR,
+  Error
+};
 
 use gamedig::protocols::{
   valve::{
     Engine, GatheringSettings, Response
   },
   types::TimeoutSettings,
-  valve,
+  valve
 };
 use std::{
   str::FromStr,
@@ -73,7 +77,7 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
 }
 
 /// Query the server statuses
-#[poise::command(slash_command, subcommands("ats", "wg"), subcommand_required)]
+#[poise::command(slash_command, subcommands("ats", "wg", "fs"), subcommand_required)]
 pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
   Ok(())
 }
@@ -130,6 +134,21 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   }
 
   ctx.send(CreateReply::default().embed(embed.title("World of Tanks Server Status").fields(embed_fields))).await?;
+
+  Ok(())
+}
+
+/// Retrieve the data from Farming Simulator 22 server
+#[poise::command(slash_command, guild_only)]
+pub async fn fs(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+  // let embed = CreateEmbed::new().color(EMBED_COLOR);
+  let server = MPServers::get_server_ip(ctx.guild_id().unwrap().into(), "testserver").await?;
+  let ip = server.0;
+  let md5 = server.1;
+
+  ctx.send(CreateReply::default().content(format!("IP: {}\nMD5: {}", ip, md5))).await?;
+
+  // ctx.send(CreateReply::default().content("This command is not yet implemented")).await?;
 
   Ok(())
 }

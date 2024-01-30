@@ -7,3 +7,15 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+  db:
+    container_name: kon-database
+    image: postgres:16.1-alpine3.19
+    restart: unless-stopped
+    ports:
+      - 37930:5432/tcp
+    volumes:
+      - /var/lib/docker/volumes/kon-database:/var/lib/postgresql/data:rw
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
