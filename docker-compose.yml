@@ -7,6 +7,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    depends_on:
+      - db
   db:
     container_name: kon-database
     image: postgres:16.1-alpine3.19@sha256:b1413d8f37470f1fb355ea833d91855d6e24929e8f4336984c5be0de62947a25
