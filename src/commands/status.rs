@@ -1,15 +1,20 @@
 use crate::{
-  models::mpservers::MPServers,
+  Error,
   EMBED_COLOR,
-  Error
+  models::gameservers::Gameservers,
+  commands::gameserver::ac_server_name
 };
 
 use gamedig::protocols::{
   valve::{
-    Engine, GatheringSettings, Response
+    Engine,
+    Response,
+    GatheringSettings
   },
-  types::TimeoutSettings,
-  valve
+  valve,
+  minecraft,
+  minecraft::RequestSettings,
+  types::TimeoutSettings
 };
 use std::{
   str::FromStr,
@@ -22,18 +27,21 @@ use reqwest::{
   Client,
   header::USER_AGENT
 };
+use tokio::{
+  net::lookup_host,
+  join
+};
 use poise::CreateReply;
 use serenity::builder::CreateEmbed;
 use once_cell::sync::Lazy;
 use cargo_toml::Manifest;
 use serde_json::Value;
-use tokio::join;
 
 static PMS_BASE: Lazy<String> = Lazy::new(||
   var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found")
 );
 
-fn query_server() -> Result<Response, Error> {
+fn query_ats_server() -> Result<Response, Error> {
   let server_ip = var("ATS_SERVER_IP").expect("Expected a \"ATS_SERVER_IP\" in the envvar but none was found");
   let addr = SocketAddr::from_str(&server_ip).unwrap();
   let engine = Engine::Source(None);
@@ -62,6 +70,35 @@ fn query_server() -> Result<Response, Error> {
   Ok(response?)
 }
 
+async fn query_gameserver(ip_address: &str) -> Result<minecraft::JavaResponse, Box<dyn std::error::Error + Send + Sync>> {
+  println!("Querying {}", ip_address);
+
+  let full_address = if ip_address.contains(':') {
+    String::from(ip_address)
+  } else {
+    format!("{}:25565", ip_address)
+  };
+
+  let addr = match SocketAddr::from_str(&full_address) {
+    Ok(addr) => addr,
+    Err(_) => {
+      let mut addrs = lookup_host(&full_address).await?;
+      addrs.next().ok_or("Address lookup failed")?
+    }
+  };
+
+  let response = minecraft::query_java(&addr, None, Some(RequestSettings {
+    hostname: addr.to_string(),
+    protocol_version: -1
+  }));
+  println!("{:?}", response);
+
+  match response {
+    Ok(response) => Ok(response),
+    Err(why) => Err(Box::new(why))
+  }
+}
+
 async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
   let bot_version = Manifest::from_path("Cargo.toml").unwrap().package.unwrap().version.unwrap();
 
@@ -77,7 +114,7 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
 }
 
 /// Query the server statuses
-#[poise::command(slash_command, subcommands("ats", "wg", "fs"), subcommand_required)]
+#[poise::command(slash_command, subcommands("ats", "wg", "mc"), subcommand_required)]
 pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
   Ok(())
 }
@@ -86,7 +123,7 @@ pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
 #[poise::command(slash_command)]
 pub async fn ats(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let embed = CreateEmbed::new().color(EMBED_COLOR);
-  match query_server() {
+  match query_ats_server() {
     Ok(response) => {
       ctx.send(CreateReply::default()
         .embed(embed
@@ -138,17 +175,38 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   Ok(())
 }
 
-/// Retrieve the data from Farming Simulator 22 server
+/// Retrieve the server data from given Minecraft Java server
 #[poise::command(slash_command, guild_only)]
-pub async fn fs(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
-  // let embed = CreateEmbed::new().color(EMBED_COLOR);
-  let server = MPServers::get_server_ip(ctx.guild_id().unwrap().into(), "testserver").await?;
-  let ip = server.0;
-  let md5 = server.1;
+pub async fn mc(
+  ctx: poise::Context<'_, (), Error>,
+  #[description = "Server name"] #[autocomplete = "ac_server_name"] server_name: String
+) -> Result<(), Error> {
+  let server = Gameservers::get_server_data(ctx.guild_id().unwrap().into(), &server_name).await;
 
-  ctx.send(CreateReply::default().content(format!("IP: {}\nMD5: {}", ip, md5))).await?;
+  match server {
+    Ok(data) => {
+      let name = &data[0];
+      let game = &data[1];
+      let ip = &data[2];
 
-  // ctx.send(CreateReply::default().content("This command is not yet implemented")).await?;
-
+      let query_result = query_gameserver(ip).await?;
+      ctx.send(CreateReply::default()
+        .embed(CreateEmbed::new()
+          .title(format!("{} Server Status", name))
+          .fields(vec![
+            ("Game", format!("{}", game), true),
+            ("Players", format!("{}/{}", query_result.players_online, query_result.players_maximum), true),
+            ("Version", format!("{}", query_result.game_version), true)
+          ])
+          .color(EMBED_COLOR)
+        )
+      ).await?;
+      // ctx.send(CreateReply::default().content("aaa")).await?;
+    },
+    Err(why) => {
+      ctx.send(CreateReply::default().content(format!("Error retrieving the server data: {:?}", why))).await?;
+    }
+  }
+  
   Ok(())
 }

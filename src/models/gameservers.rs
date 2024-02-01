@@ -8,7 +8,6 @@ pub struct Gameservers {
   pub ip_address: String
 }
 
-#[allow(dead_code)]
 impl Gameservers {
   pub async fn list_servers(guild_id: u64) -> Result<Vec<Self>, tokio_postgres::Error> {
     let client = DatabaseController::new().await?.client;
@@ -74,7 +73,8 @@ impl Gameservers {
     Ok(())
   }
 
-  pub async fn update_name(guild_id: u64, server_name: &str, new_name: &str) -> Result<(), tokio_postgres::Error> {
+  // To be added at some point. Not sure if it's needed.
+  /* pub async fn update_name(guild_id: u64, server_name: &str, new_name: &str) -> Result<(), tokio_postgres::Error> {
     let client = DatabaseController::new().await?.client;
     client.execute("
       UPDATE gameservers
@@ -83,5 +83,37 @@ impl Gameservers {
     ", &[&new_name, &(guild_id as i64), &server_name]).await?;
 
     Ok(())
+  } */
+
+  pub async fn get_server_names(guild_id: u64) -> Result<Vec<String>, tokio_postgres::Error> {
+    let client = DatabaseController::new().await?.client;
+    let rows = client.query("
+      SELECT server_name FROM gameservers
+      WHERE guild_owner = $1
+    ", &[&(guild_id as i64)]).await?;
+  
+    let mut servers = Vec::new();
+    for row in rows {
+      servers.push(row.get("server_name"));
+    }
+  
+    Ok(servers)
+  }
+
+  pub async fn get_server_data(guild_id: u64, server_name: &str) -> Result<Vec<String>, tokio_postgres::Error> {
+    let client = DatabaseController::new().await?.client;
+    let rows = client.query("
+      SELECT * FROM gameservers
+      WHERE guild_owner = $1 AND server_name = $2
+    ", &[&(guild_id as i64), &server_name]).await?;
+
+    let mut server = Vec::new();
+    for row in rows {
+      server.push(row.get("server_name"));
+      server.push(row.get("game_name"));
+      server.push(row.get("ip_address"))
+    }
+
+    Ok(server)
   }
 }
