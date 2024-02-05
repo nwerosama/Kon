@@ -37,7 +37,7 @@ impl Gameservers {
     let client = DatabaseController::new().await?.client;
     client.execute("
       INSERT INTO gameservers (server_name, game_name, guild_owner, ip_address)
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4)
     ", &[&server_name, &game_name, &(guild_id as i64), &ip_address]).await?;
 
     Ok(())
