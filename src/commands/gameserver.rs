@@ -11,15 +11,21 @@ use serenity::{
     Stream,
     StreamExt
   },
-  all::Mentionable,
   builder::CreateActionRow,
   builder::CreateEmbed,
 };
 use poise::{
   CreateReply,
   serenity_prelude,
-  serenity_prelude::ButtonStyle
+  serenity_prelude::ButtonStyle,
+  ChoiceParameter
 };
+
+#[derive(Debug, poise::ChoiceParameter)]
+enum GameNames {
+  #[name = "Minecraft"]
+  Minecraft
+}
 
 /// Manage the game servers for this guild
 #[poise::command(slash_command, subcommands("add", "remove", "update", "list"), subcommand_required, guild_only)]
@@ -32,25 +38,9 @@ pub async fn gameserver(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
 pub async fn add(
   ctx: poise::Context<'_, (), Error>,
   #[description = "Server name as shown in-game or friendly name"] server_name: String,
-  #[description = "Which game is this server running?"] game_name: String,
-  #[channel_types("Text")] #[description = "Which channel should this server be restricted to?"] guild_channel: serenity_prelude::GuildChannel,
+  #[description = "Which game is this server running?"] game_name: GameNames,
   #[description = "IP address/domain of the server (Include the port if it has one, e.g 127.0.0.1:8080)"] ip_address: String
 ) -> Result<(), Error> {
-  let unsupported_games_list = [
-    "ATS",
-    "ETS2",
-    "Euro Truck Simulator 2",
-    "American Truck Simulator",
-  ];
-  if unsupported_games_list.contains(&game_name.as_str()) {
-    ctx.send(CreateReply::default()
-      .ephemeral(true)
-      .content(format!("Sorry, `{}` is not supported yet due to database design.", game_name))
-    ).await?;
-  
-    return Ok(());
-  }
-
   let action_row = CreateActionRow::Buttons(vec![
     serenity_prelude::CreateButton::new("add-confirm")
       .style(ButtonStyle::Success)
@@ -66,9 +56,8 @@ pub async fn add(
       .description(format!("
         **Server name:** `{}`
         **Game name:** `{}`
-        **Channel:** {}
         **IP Address:** `{}`
-      ", server_name, game_name, guild_channel.mention(), ip_address))
+      ", server_name, game_name.name(), ip_address))
       .color(EMBED_COLOR)
     )
     .components(vec![action_row]);
@@ -76,7 +65,6 @@ pub async fn add(
   ctx.send(reply).await?;
 
   while let Some(collector) = serenity_prelude::ComponentInteractionCollector::new(ctx)
-    .channel_id(ctx.channel_id())
     .guild_id(ctx.guild_id().unwrap())
     .author_id(ctx.author().id)
     .timeout(std::time::Duration::from_secs(30))
@@ -86,8 +74,7 @@ pub async fn add(
       let result = Gameservers::add_server(
         ctx.guild_id().unwrap().into(),
         server_name.as_str(),
-        game_name.as_str(),
-        guild_channel.id.into(),
+        game_name.name(),
         ip_address.as_str()
       ).await;
 
@@ -155,7 +142,6 @@ pub async fn remove(
   ctx.send(reply).await?;
 
   while let Some(collector) = serenity_prelude::ComponentInteractionCollector::new(ctx)
-    .channel_id(ctx.channel_id())
     .guild_id(ctx.guild_id().unwrap())
     .author_id(ctx.author().id)
     .timeout(std::time::Duration::from_secs(30))
@@ -207,15 +193,13 @@ pub async fn remove(
 pub async fn update(
   ctx: poise::Context<'_, (), Error>,
   #[description = "Server name"] #[autocomplete = "ac_server_name"] server_name: String,
-  #[description = "Game name"] game_name: String,
-  #[description = "Channel"] #[channel_types("Text")] guild_channel: serenity_prelude::GuildChannel,
+  #[description = "Game name"] game_name: GameNames,
   #[description = "IP address"] ip_address: String
 ) -> Result<(), Error> {
   let result = Gameservers::update_server(
     ctx.guild_id().unwrap().into(),
     &server_name,
-    &game_name,
-    guild_channel.id.into(),
+    &game_name.name(),
     &ip_address
   ).await;
 
