@@ -94,7 +94,7 @@ pub async fn add(
           msg.edit(
             ctx,
             serenity_prelude::EditMessage::new()
-              .content(format!("*Error adding server to database: {:?}*", y))
+              .content(format!("*Error adding server to database:\n`{}`*", y))
               .embeds(Vec::new())
               .components(Vec::new())
           ).await?;
@@ -166,7 +166,7 @@ pub async fn remove(
           msg.edit(
             ctx,
             serenity_prelude::EditMessage::new()
-              .content(format!("*Error removing server from database: {:?}*", y))
+              .content(format!("*Error removing server from database:\n`{}`*", y))
               .embeds(Vec::new())
               .components(Vec::new())
           ).await?;

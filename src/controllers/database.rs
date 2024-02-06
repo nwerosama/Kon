@@ -23,10 +23,11 @@ impl DatabaseController {
     // Gameservers
     client.batch_execute("
       CREATE TABLE IF NOT EXISTS gameservers (
-        server_name VARCHAR(255) NOT NULL PRIMARY KEY,
+        server_name VARCHAR(255) NOT NULL,
         game_name VARCHAR(255) NOT NULL,
         guild_owner BIGINT NOT NULL,
-        ip_address VARCHAR(255) NOT NULL
+        ip_address VARCHAR(255) NOT NULL,
+        PRIMARY KEY (server_name, guild_owner)
       );
     ").await?;
 
