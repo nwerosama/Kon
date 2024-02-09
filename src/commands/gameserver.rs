@@ -21,14 +21,21 @@ use poise::{
   ChoiceParameter
 };
 
-#[derive(Debug, poise::ChoiceParameter)]
+#[derive(Debug, ChoiceParameter)]
 enum GameNames {
   #[name = "Minecraft"]
   Minecraft
 }
 
 /// Manage the game servers for this guild
-#[poise::command(slash_command, subcommands("add", "remove", "update", "list"), subcommand_required, guild_only)]
+#[poise::command(
+  slash_command,
+  subcommands("add", "remove", "update", "list"),
+  subcommand_required,
+  guild_only,
+  default_member_permissions = "MANAGE_GUILD",
+  required_permissions = "MANAGE_GUILD" // No clue if this is needed or not. Just leaving it here for now
+)]
 pub async fn gameserver(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
   Ok(())
 }
