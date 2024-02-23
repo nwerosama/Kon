@@ -71,7 +71,7 @@ async fn gs_query_minecraft(server_ip: &str) -> Result<MinecraftQueryData, Error
     let data: MinecraftQueryData = req.json().await?;
     Ok(data)
   } else {
-    return Err(Error::from("Failed to query the server."));
+    Err(Error::from("Failed to query the server."))
   }
 }
 
@@ -126,7 +126,7 @@ pub async fn gs(
 
   // Extract values from a Vec above
   let game_name = &server_data[1];
-  let ip_address = &server_data[2]; 
+  let ip_address = &server_data[2];
 
   match game_name.as_str() {
     "Minecraft" => {
@@ -153,10 +153,7 @@ pub async fn gs(
         ).await?;
       }
     },
-    _ => {
-      ctx.send(CreateReply::default().content("Game not supported yet.")).await?;
-      return Ok(());
-    }
+    _ => {}
   }
 
   Ok(())
