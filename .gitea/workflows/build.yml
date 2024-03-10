@@ -39,7 +39,15 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-kon
           cache-from: type=local,src=/tmp/.buildx-cache,mode=max
 
-      - name: Rotate cache
-        run: |
-          rm -rf /tmp/.buildx-cache && \
-          mv /tmp/.buildx-cache-kon /tmp/.buildx-cache
+      - name: Container deployment
+        uses: https://github.com/appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd kon && docker compose pull && \
+            docker compose down bot --remove-orphans && docker compose up -d bot && \
+            docker image prune -f && docker system prune -f
