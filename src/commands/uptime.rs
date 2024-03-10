@@ -38,13 +38,13 @@ fn format_duration(secs: u64) -> String {
 
   let mut formatted_string = String::new();
   if days > 0 {
-      formatted_string.push_str(&format!("{}d, ", days));
+    formatted_string.push_str(&format!("{}d, ", days));
   }
   if hours > 0 || days > 0 {
-      formatted_string.push_str(&format!("{}h, ", hours));
+    formatted_string.push_str(&format!("{}h, ", hours));
   }
   if minutes > 0 || hours > 0 {
-      formatted_string.push_str(&format!("{}m, ", minutes));
+    formatted_string.push_str(&format!("{}m, ", minutes));
   }
   formatted_string.push_str(&format!("{}s", seconds));
 

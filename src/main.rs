@@ -47,8 +47,8 @@ async fn on_ready(
 
     match commands {
       Ok(cmdmap) => for command in cmdmap.iter() {
-          println!("Registered command globally: {}", command.name);
-        },
+        println!("Registered command globally: {}", command.name);
+      },
       Err(why) => println!("Error registering commands: {:?}", why)
     }
   }
@@ -75,6 +75,14 @@ async fn main() {
           None => String::from("DM")
         };
         println!("[{}] {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name)
+      }),
+      on_error: |error| Box::pin(async move {
+        match error {
+          poise::FrameworkError::Command { error, ctx, .. } => {
+            println!("PoiseCommandError({}): {}", ctx.command().qualified_name, error);
+          }
+          other => println!("PoiseOtherError: {:?}", other)
+        }
       }),
       initialize_owners: true,
       ..Default::default()

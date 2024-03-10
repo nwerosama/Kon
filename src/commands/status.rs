@@ -27,9 +27,9 @@ static PMS_BASE: Lazy<String> = Lazy::new(||
 
 #[derive(Deserialize)]
 struct MinecraftQueryData {
-  motd: MinecraftMotd,
-  players: MinecraftPlayers,
-  version: String,
+  motd: Option<MinecraftMotd>,
+  players: Option<MinecraftPlayers>,
+  version: Option<String>,
   online: bool
 }
 
@@ -38,7 +38,7 @@ struct MinecraftMotd {
   clean: Vec<String>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy)]
 struct MinecraftPlayers {
   online: i32,
   max: i32
@@ -70,6 +70,8 @@ async fn gs_query_minecraft(server_ip: &str) -> Result<MinecraftQueryData, Error
   if req.status().is_success() {
     let data: MinecraftQueryData = req.json().await?;
     Ok(data)
+  } else if req.status().is_server_error() {
+    Err(Error::from("Webserver returned a 5xx error.")) 
   } else {
     Err(Error::from("Failed to query the server."))
   }
@@ -137,9 +139,9 @@ pub async fn gs(
         let mut embed_fields = Vec::new();
         embed_fields.push(("Server IP".to_owned(), ip_address.to_owned(), true));
         embed_fields.push((format!("\u{200b}"), format!("\u{200b}"), true));
-        embed_fields.push(("MOTD".to_owned(), format!("{}", result.motd.clean[0]), true));
-        embed_fields.push(("Players".to_owned(), format!("**{}**/**{}**", result.players.online, result.players.max), true));
-        embed_fields.push(("Version".to_owned(), result.version, true));
+        embed_fields.push(("MOTD".to_owned(), format!("{}", result.motd.unwrap().clean[0]), true));
+        embed_fields.push(("Players".to_owned(), format!("**{}**/**{}**", result.players.unwrap().online, result.players.clone().unwrap().max), true));
+        embed_fields.push(("Version".to_owned(), result.version.unwrap(), true));
 
         ctx.send(CreateReply::default()
           .embed(embed
@@ -149,7 +151,7 @@ pub async fn gs(
         ).await?;
       } else {
         ctx.send(CreateReply::default()
-          .content(format!("Server **{}** (`{}`) is currently offline.", server_name, ip_address))
+          .content(format!("**{}** (`{}`) is currently offline or unreachable.", server_name, ip_address))
         ).await?;
       }
     },

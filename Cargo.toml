@@ -1,10 +1,8 @@
 [package]
 name = "kon"
-version = "0.1.15"
+version = "0.1.16"
 rust-version = "1.74"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 cargo_toml = "0.19.2"
@@ -31,3 +29,4 @@ debug = true
 [profile.release]
 opt-level = 3
 debug = false
+strip = true
