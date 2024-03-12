@@ -1,6 +1,7 @@
 mod commands;
 mod controllers;
 mod models;
+mod utils;
 
 use poise::serenity_prelude::{self as serenity};
 use std::{

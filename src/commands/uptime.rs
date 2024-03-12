@@ -1,4 +1,11 @@
-use crate::Error;
+use crate::{
+  Error,
+  utils::{
+    format_duration,
+    format_memory,
+    concat_message
+  }
+};
 
 use sysinfo::System;
 use uptime_lib::get;
@@ -14,6 +21,11 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let mut sys = System::new_all();
   sys.refresh_all();
 
+  // Fetch system's memory usage
+  let memory_used = System::used_memory(&sys);
+  let memory_free = System::free_memory(&sys);
+  let memory_total = System::total_memory(&sys);
+
   // Fetch system's uptime
   let sys_uptime = get().unwrap().as_secs();
 
@@ -26,27 +38,12 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
     proc_uptime = now.duration_since(time_started).unwrap().as_secs();
   }
 
-  ctx.reply(format!("System: `{}`\nProcess: `{}`", format_duration(sys_uptime), format_duration(proc_uptime))).await?;
+  let stat_msg = vec![
+    format!("System: `{}`", format_duration(sys_uptime)),
+    format!("Process: `{}`", format_duration(proc_uptime)),
+    format!("Memory: `{} / {} / {}`", format_memory(memory_free), format_memory(memory_used), format_memory(memory_total))
+  ];
+  ctx.reply(concat_message(stat_msg)).await?;
+
   Ok(())
-}
-
-fn format_duration(secs: u64) -> String {
-  let days = secs / 86400;
-  let hours = (secs % 86400) / 3600;
-  let minutes = (secs % 3600) / 60;
-  let seconds = secs % 60;
-
-  let mut formatted_string = String::new();
-  if days > 0 {
-    formatted_string.push_str(&format!("{}d, ", days));
-  }
-  if hours > 0 || days > 0 {
-    formatted_string.push_str(&format!("{}h, ", hours));
-  }
-  if minutes > 0 || hours > 0 {
-    formatted_string.push_str(&format!("{}m, ", minutes));
-  }
-  formatted_string.push_str(&format!("{}s", seconds));
-
-  formatted_string
 }
