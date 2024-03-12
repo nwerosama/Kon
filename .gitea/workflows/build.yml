@@ -36,7 +36,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: git.toast-server.net/toast/kon:main
-          cache-to: type=local,dest=/tmp/.buildx-cache-kon
+          cache-to: type=local,dest=/tmp/.build-cache
           cache-from: type=local,src=/tmp/.buildx-cache,mode=max
 
       - name: Container deployment
