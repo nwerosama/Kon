@@ -5,7 +5,7 @@ on:
       - master
 jobs:
   build:
-    runs-on: ubuntu-22.04-node
+    runs-on: self-hosted
     steps:
       - name: Set up Docker environment
         run: |
