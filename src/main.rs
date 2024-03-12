@@ -36,7 +36,7 @@ async fn on_ready(
   let ready_embed = CreateEmbed::new()
     .color(EMBED_COLOR)
     .thumbnail(ready.user.avatar_url().unwrap_or_default())
-    .author(CreateEmbedAuthor::new(format!("{} is ready!", ready.user.name)).clone());
+    .author(CreateEmbedAuthor::new(format!("{} ({}) is ready!", ready.user.name, &**utils::BOT_VERSION)).clone());
 
   serenity::ChannelId::new(BOT_READY_NOTIFY).send_message(&ctx.http, message.add_embed(ready_embed)).await?;
 

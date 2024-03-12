@@ -2,8 +2,8 @@ use crate::{
   Error,
   utils::{
     format_duration,
-    format_memory,
-    concat_message
+    concat_message,
+    BOT_VERSION
   }
 };
 
@@ -18,13 +18,9 @@ use std::time::{
 /// Retrieve host and bot uptimes
 #[poise::command(slash_command)]
 pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+  let _bot = ctx.http().get_current_user().await.unwrap();
   let mut sys = System::new_all();
   sys.refresh_all();
-
-  // Fetch system's memory usage
-  let memory_used = System::used_memory(&sys);
-  let memory_free = System::free_memory(&sys);
-  let memory_total = System::total_memory(&sys);
 
   // Fetch system's uptime
   let sys_uptime = get().unwrap().as_secs();
@@ -39,9 +35,9 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   }
 
   let stat_msg = vec![
-    format!("System: `{}`", format_duration(sys_uptime)),
-    format!("Process: `{}`", format_duration(proc_uptime)),
-    format!("Memory: `{} / {} / {}`", format_memory(memory_free), format_memory(memory_used), format_memory(memory_total))
+    format!("**{} {}**", _bot.name, &**BOT_VERSION),
+    format!(">>> System: `{}`", format_duration(sys_uptime)),
+    format!("Process: `{}`", format_duration(proc_uptime))
   ];
   ctx.reply(concat_message(stat_msg)).await?;
 

@@ -2,7 +2,8 @@ use crate::{
   Error,
   EMBED_COLOR,
   models::gameservers::Gameservers,
-  commands::gameserver::ac_server_name
+  commands::gameserver::ac_server_name,
+  utils::BOT_VERSION
 };
 
 use std::{
@@ -17,7 +18,6 @@ use tokio::join;
 use poise::CreateReply;
 use serenity::builder::CreateEmbed;
 use once_cell::sync::Lazy;
-use cargo_toml::Manifest;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -45,11 +45,9 @@ struct MinecraftPlayers {
 }
 
 async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
-  let bot_version = Manifest::from_path("Cargo.toml").unwrap().package.unwrap().version.unwrap();
-
   let client = Client::new();
   let req = client.get(url)
-    .header(USER_AGENT, format!("Kon/{}/Rust", bot_version))
+    .header(USER_AGENT, format!("Kon/{}/Rust", &**BOT_VERSION))
     .send()
     .await?;
   let response = req.json::<HashMap<String, Value>>().await?;
@@ -59,11 +57,9 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
 }
 
 async fn gs_query_minecraft(server_ip: &str) -> Result<MinecraftQueryData, Error> {
-  let bot_version = Manifest::from_path("Cargo.toml").unwrap().package.unwrap().version.unwrap();
-
   let client = Client::new();
   let req = client.get(format!("https://api.mcsrvstat.us/2/{}", server_ip))
-    .header(USER_AGENT, format!("Kon/{}/Rust", bot_version))
+    .header(USER_AGENT, format!("Kon/{}/Rust", &**BOT_VERSION))
     .send()
     .await?;
 

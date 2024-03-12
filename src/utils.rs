@@ -1,3 +1,10 @@
+use once_cell::sync::Lazy;
+
+pub static BOT_VERSION: Lazy<String> = Lazy::new(|| {
+  let cargo_version = cargo_toml::Manifest::from_path("Cargo.toml").unwrap().package.unwrap().version.unwrap();
+  format!("v{}", cargo_version)
+});
+
 pub fn concat_message(messages: Vec<String>) -> String {
   messages.join("\n")
 }
@@ -23,7 +30,7 @@ pub fn format_duration(secs: u64) -> String {
   formatted_string
 }
 
-pub fn format_memory(bytes: u64) -> String {
+/* pub fn format_memory(bytes: u64) -> String {
   let kb = 1024;
   let mb = 1024 * 1024;
   let gb = 1024 * 1024 * 1024;
@@ -34,4 +41,4 @@ pub fn format_memory(bytes: u64) -> String {
     b if b >= kb => format!("{:.0} KB", (b as f64 / 1024.0).ceil()),
     _ => format!("{:.0} B", bytes),
   }
-}
+} */
