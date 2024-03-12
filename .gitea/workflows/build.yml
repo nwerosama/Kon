@@ -26,6 +26,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Retrieve cache
+        uses: https://github.com/actions/cache@v4.0.1
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Set up Docker Buildx
         uses: https://github.com/docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3
 
