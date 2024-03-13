@@ -1,9 +1,9 @@
 use crate::{
   Error,
-  EMBED_COLOR,
   models::gameservers::Gameservers,
   commands::gameserver::ac_server_name,
-  utils::BOT_VERSION
+  utils::BOT_VERSION,
+  utils::EMBED_COLOR
 };
 
 use std::{

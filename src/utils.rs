@@ -1,5 +1,7 @@
 use once_cell::sync::Lazy;
 
+pub static EMBED_COLOR: i32 = 0x5a99c7;
+
 pub static BOT_VERSION: Lazy<String> = Lazy::new(|| {
   let cargo_version = cargo_toml::Manifest::from_path("Cargo.toml").unwrap().package.unwrap().version.unwrap();
   format!("v{}", cargo_version)

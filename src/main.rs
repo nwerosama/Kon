@@ -22,7 +22,6 @@ use serenity::{
 
 type Error = Box<dyn error::Error + Send + Sync>;
 
-pub static EMBED_COLOR: i32 = 0x5a99c7;
 static BOT_READY_NOTIFY: u64 = 865673694184996888;
 
 async fn on_ready(
@@ -34,9 +33,9 @@ async fn on_ready(
 
   let message = CreateMessage::new();
   let ready_embed = CreateEmbed::new()
-    .color(EMBED_COLOR)
+    .color(utils::EMBED_COLOR)
     .thumbnail(ready.user.avatar_url().unwrap_or_default())
-    .author(CreateEmbedAuthor::new(format!("{} ({}) is ready!", ready.user.name, &**utils::BOT_VERSION)).clone());
+    .author(CreateEmbedAuthor::new(format!("{} is ready!", ready.user.name)).clone());
 
   serenity::ChannelId::new(BOT_READY_NOTIFY).send_message(&ctx.http, message.add_embed(ready_embed)).await?;
 
