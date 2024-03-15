@@ -1,6 +1,6 @@
 use crate::{
   Error,
-  utils::EMBED_COLOR,
+  internals::utils::EMBED_COLOR,
   models::gameservers::Gameservers
 };
 

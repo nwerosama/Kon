@@ -2,17 +2,13 @@ use crate::{
   Error,
   models::gameservers::Gameservers,
   commands::gameserver::ac_server_name,
-  utils::BOT_VERSION,
-  utils::EMBED_COLOR
+  internals::utils::EMBED_COLOR,
+  internals::http::HttpClient
 };
 
 use std::{
   collections::HashMap,
   env::var
-};
-use reqwest::{
-  Client,
-  header::USER_AGENT
 };
 use tokio::join;
 use poise::CreateReply;
@@ -45,11 +41,9 @@ struct MinecraftPlayers {
 }
 
 async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
-  let client = Client::new();
-  let req = client.get(url)
-    .header(USER_AGENT, format!("Kon/{}/Rust", &**BOT_VERSION))
-    .send()
-    .await?;
+  let client = HttpClient::new();
+  let req = client.get(url).await?;
+
   let response = req.json::<HashMap<String, Value>>().await?;
   let servers = response["data"].as_array().unwrap()[0]["servers_statuses"]["data"].as_array().unwrap().clone();
 
@@ -57,11 +51,8 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
 }
 
 async fn gs_query_minecraft(server_ip: &str) -> Result<MinecraftQueryData, Error> {
-  let client = Client::new();
-  let req = client.get(format!("https://api.mcsrvstat.us/2/{}", server_ip))
-    .header(USER_AGENT, format!("Kon/{}/Rust", &**BOT_VERSION))
-    .send()
-    .await?;
+  let client = HttpClient::new();
+  let req = client.get(&format!("https://api.mcsrvstat.us/2/{}", server_ip)).await?;
 
   if req.status().is_success() {
     let data: MinecraftQueryData = req.json().await?;

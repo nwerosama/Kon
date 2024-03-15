@@ -1,6 +1,6 @@
 use crate::{
   Error,
-  utils::{
+  internals::utils::{
     format_duration,
     concat_message,
     BOT_VERSION
@@ -35,7 +35,7 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   }
 
   let stat_msg = vec![
-    format!("**{} {}**", _bot.name, &**BOT_VERSION),
+    format!("**{} {}**", _bot.name, BOT_VERSION.as_str()),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
     format!("Process: `{}`", format_duration(proc_uptime))
   ];
