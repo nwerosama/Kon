@@ -581,15 +581,19 @@ dependencies = [
 
 [[package]]
 name = "gamedig"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7fe80214345cf917eff180f20b889a8e951d285b40215501c12eb754142359b"
+checksum = "f351da15ad9dd6cafd687c9a016e0128741120884925c53d79c7d20f0f9e6ef9"
 dependencies = [
  "byteorder",
  "bzip2-rs",
  "crc32fast",
+ "encoding_rs",
  "phf",
+ "serde",
  "serde_json",
+ "ureq",
+ "url",
 ]
 
 [[package]]
@@ -2225,6 +2229,21 @@ dependencies = [
  "libc",
  "thiserror",
  "windows",
+]
+
+[[package]]
+name = "ureq"
+version = "2.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11f214ce18d8b2cbe84ed3aa6486ed3f5b285cf8d8fbdbce9f3f767a724adc35"
+dependencies = [
+ "base64",
+ "flate2",
+ "log",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "url",
 ]
 
 [[package]]
