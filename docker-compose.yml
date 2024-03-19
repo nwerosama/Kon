@@ -11,7 +11,7 @@ services:
       - db
   db:
     container_name: kon-database
-    image: postgres:16.2-alpine3.19@sha256:49fd8c13fbd0eb92572df9884ca41882a036beac0f12e520274be85e7e7806e9
+    image: postgres:16.2-alpine3.19
     restart: unless-stopped
     ports:
       - 37930:5432/tcp
