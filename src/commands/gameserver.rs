@@ -4,7 +4,7 @@ use crate::{
   models::gameservers::Gameservers
 };
 
-use serenity::{
+use poise::serenity_prelude::{
   futures::{
     stream::iter,
     future::ready,

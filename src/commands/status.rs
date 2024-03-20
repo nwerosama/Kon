@@ -12,7 +12,7 @@ use std::{
 };
 use tokio::join;
 use poise::CreateReply;
-use serenity::builder::CreateEmbed;
+use poise::serenity_prelude::builder::CreateEmbed;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde_json::Value;

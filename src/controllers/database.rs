@@ -1,4 +1,4 @@
-use serenity::prelude::TypeMapKey;
+use poise::serenity_prelude::prelude::TypeMapKey;
 use tokio_postgres::{Client, NoTls, Error};
 
 pub struct DatabaseController {
