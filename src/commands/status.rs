@@ -50,6 +50,22 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
   Ok(servers)
 }
 
+fn process_pms_statuses(servers: Vec<Vec<Value>>) -> Vec<(String, String, bool)> {
+  let mut statuses = Vec::new();
+  for server_list in servers {
+    for server in server_list {
+      let name = server["name"].as_str().unwrap();
+      let status = match server["availability"].as_str().unwrap() {
+        "1" => "Online",
+        "-1" => "Offline",
+        _ => "Unknown"
+      };
+      statuses.push((name.to_owned(), status.to_owned(), true));
+    }
+  }
+  statuses
+}
+
 async fn gs_query_minecraft(server_ip: &str) -> Result<MinecraftQueryData, Error> {
   let client = HttpClient::new();
   let req = client.get(&format!("https://api.mcsrvstat.us/2/{}", server_ip)).await?;
@@ -78,29 +94,9 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let embed = CreateEmbed::new().color(EMBED_COLOR);
 
   let (servers_asia, servers_eu) = join!(pms_serverstatus(&pms_asia), pms_serverstatus(&pms_eu));
+  let pms_servers = process_pms_statuses(vec![servers_eu.unwrap(), servers_asia.unwrap()]);
 
-  let mut embed_fields = Vec::new();
-  for server in servers_eu.unwrap() {
-    let name = server["name"].as_str().unwrap().to_owned();
-    let status = match server["availability"].as_str().unwrap() {
-      "1" => "Online",
-      "-1" => "Offline",
-      _ => "Unknown"
-    };
-    embed_fields.push((name, status, true));
-  }
-
-  for server in servers_asia.unwrap() {
-    let name = server["name"].as_str().unwrap().to_owned();
-    let status = match server["availability"].as_str().unwrap() {
-      "1" => "Online",
-      "-1" => "Offline",
-      _ => "Unknown"
-    };
-    embed_fields.push((name, status, true));
-  }
-
-  ctx.send(CreateReply::default().embed(embed.title("World of Tanks Server Status").fields(embed_fields))).await?;
+  ctx.send(CreateReply::default().embed(embed.title("World of Tanks Server Status").fields(pms_servers))).await?;
 
   Ok(())
 }
