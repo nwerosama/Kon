@@ -41,7 +41,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.build-cache
           cache-from: type=local,src=/tmp/.buildx-cache,mode=max
 
-      - name: Container deployment
+      - name: Update Delivery
         uses: https://github.com/appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -50,6 +50,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd kon && docker compose pull && \
-            docker compose down bot --remove-orphans && docker compose up -d bot && \
+            cd kon && docker compose && \
+            docker compose down --remove-orphans && docker compose up -d && \
             docker image prune -f && docker system prune -f
