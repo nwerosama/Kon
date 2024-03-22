@@ -45,7 +45,7 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<(String, Vec<Value>)>, Error>
   let req = client.get(url).await?;
 
   let response = req.json::<HashMap<String, Value>>().await?;
-  let data = response["data"].as_array().unwrap();//[0]["servers_statuses"]["data"].as_array().unwrap().clone();
+  let data = response["data"].as_array().unwrap();
 
   let mut servers = Vec::new();
   for item in data {
@@ -119,7 +119,6 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let embed = CreateEmbed::new().color(EMBED_COLOR);
 
   let (servers_asia, servers_eu) = join!(pms_serverstatus(&pms_asia), pms_serverstatus(&pms_eu));
-  // let pms_servers = process_pms_statuses(vec![servers_eu.unwrap(), servers_asia.unwrap()]);
   let joined_pms_servers = [servers_eu.unwrap(), servers_asia.unwrap()].concat();
   let pms_servers = process_pms_statuses(joined_pms_servers.to_vec());
 
