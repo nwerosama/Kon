@@ -82,7 +82,7 @@ async fn main() {
           poise::FrameworkError::Command { error, ctx, .. } => {
             println!("PoiseCommandError({}): {}", ctx.command().qualified_name, error);
           }
-          other => println!("PoiseOtherError: {:?}", other)
+          other => println!("PoiseOtherError: {}", other)
         }
       }),
       initialize_owners: true,

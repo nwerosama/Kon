@@ -40,28 +40,53 @@ struct MinecraftPlayers {
   max: i32
 }
 
-async fn pms_serverstatus(url: &str) -> Result<Vec<Value>, Error> {
+async fn pms_serverstatus(url: &str) -> Result<Vec<(String, Vec<Value>)>, Error> {
   let client = HttpClient::new();
   let req = client.get(url).await?;
 
   let response = req.json::<HashMap<String, Value>>().await?;
-  let servers = response["data"].as_array().unwrap()[0]["servers_statuses"]["data"].as_array().unwrap().clone();
+  let data = response["data"].as_array().unwrap();//[0]["servers_statuses"]["data"].as_array().unwrap().clone();
+
+  let mut servers = Vec::new();
+  for item in data {
+    if let Some(title) = item["title"].as_str() {
+      if let Some(servers_statuses) = item["servers_statuses"]["data"].as_array() {
+        if !servers_statuses.is_empty() {
+          servers.push((title.to_owned(), servers_statuses.clone()));
+        }
+      }
+    }
+  }
 
   Ok(servers)
 }
 
-fn process_pms_statuses(servers: Vec<Vec<Value>>) -> Vec<(String, String, bool)> {
-  let mut statuses = Vec::new();
-  for server_list in servers {
-    for server in server_list {
+fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, String, bool)> {
+  let mut server_map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+  let id_name_map: HashMap<&str, &str> = [
+    ("wotbsg", "ASIA"),
+    ("wowssg", "WoWS (ASIA)"),
+    ("wowseu", "WoWS (EU)")
+  ].iter().cloned().collect();
+
+  for (title, mapped_servers) in servers {
+    for server in mapped_servers {
       let name = server["name"].as_str().unwrap();
+      let id = server["id"].as_str().unwrap().split(":").next().unwrap_or("");
       let status = match server["availability"].as_str().unwrap() {
         "1" => "Online",
         "-1" => "Offline",
         _ => "Unknown"
       };
-      statuses.push((name.to_owned(), status.to_owned(), true));
+      let name = id_name_map.get(id).unwrap_or(&name);
+      server_map.entry(title.clone()).or_insert_with(Vec::new).push((name.to_owned().to_string(), status.to_owned()));
     }
+  }
+
+  let mut statuses = Vec::new();
+  for (title, servers) in server_map {
+    let servers_str = servers.iter().map(|(name, status)| format!("{}: {}", name, status)).collect::<Vec<String>>().join("\n");
+    statuses.push((title, servers_str, true));
   }
   statuses
 }
@@ -94,9 +119,11 @@ pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let embed = CreateEmbed::new().color(EMBED_COLOR);
 
   let (servers_asia, servers_eu) = join!(pms_serverstatus(&pms_asia), pms_serverstatus(&pms_eu));
-  let pms_servers = process_pms_statuses(vec![servers_eu.unwrap(), servers_asia.unwrap()]);
+  // let pms_servers = process_pms_statuses(vec![servers_eu.unwrap(), servers_asia.unwrap()]);
+  let joined_pms_servers = [servers_eu.unwrap(), servers_asia.unwrap()].concat();
+  let pms_servers = process_pms_statuses(joined_pms_servers.to_vec());
 
-  ctx.send(CreateReply::default().embed(embed.title("World of Tanks Server Status").fields(pms_servers))).await?;
+  ctx.send(CreateReply::default().embed(embed.title("Wargaming Server Status").fields(pms_servers))).await?;
 
   Ok(())
 }
