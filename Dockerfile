@@ -1,4 +1,4 @@
-FROM rust:1.77-alpine3.19@sha256:eb37f58646a901dc7727cf448cae36daaefaba79de33b5058dab79aa4c04aefb AS compiler
+FROM rust:1.77-alpine3.19@sha256:4a7925c3974fab3fb68b3f4d93d1a4a36cb201f9f87b01014def219b125f1960 AS compiler
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN apk add --no-cache openssl-dev musl-dev 
 WORKDIR /usr/src/kon
