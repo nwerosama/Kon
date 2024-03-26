@@ -12,9 +12,7 @@ jobs:
       - name: "Add Cargo registry"
         run: |
           mkdir -p ~/.cargo && \
-          echo '[registries.gitea]' \
-            'index = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"' \
-            'token = "Bearer ${{ secrets.CARGO_TOKEN }}"' >> ~/.cargo/config.toml
+          printf '[registries.gitea]\nindex = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"\ntoken = "Bearer %s"\n' "${{ secrets.CARGO_TOKEN }}" >> ~/.cargo/config.toml
           cat ~/.cargo/config.toml
 
       - name: Set up Docker environment
