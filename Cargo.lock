@@ -952,7 +952,7 @@ dependencies = [
 
 [[package]]
 name = "kon"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "cargo_toml",
  "gamedig",
@@ -1799,9 +1799,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.114"
+version = "1.0.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5f09b1bd632ef549eaa9f60a1f8de742bdbc698e6cee2095fc84dde5f549ae0"
+checksum = "12dc5c46daa8e9fdf4f5e71b6cf9a53f2487da0e86e55808e2d35539666497dd"
 dependencies = [
  "itoa",
  "ryu",
@@ -2117,9 +2117,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokenservice-client"
-version = "0.1.0"
+version = "0.2.0"
 source = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"
-checksum = "7da0d635427394e32f228f3c0c7642e1ffd3fe1f668739b1435fd737bb9f58e6"
+checksum = "ce6d723554b87f8068463a7aae14ed604e2804a8a0827d251d7ac08850bac18e"
 dependencies = [
  "reqwest 0.12.2",
  "serde",

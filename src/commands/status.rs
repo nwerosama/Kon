@@ -3,23 +3,16 @@ use crate::{
   models::gameservers::Gameservers,
   commands::gameserver::ac_server_name,
   internals::utils::EMBED_COLOR,
-  internals::http::HttpClient
+  internals::http::HttpClient,
+  internals::utils::token_path
 };
 
-use std::{
-  collections::HashMap,
-  env::var
-};
+use std::collections::HashMap;
 use tokio::join;
 use poise::CreateReply;
 use poise::serenity_prelude::builder::CreateEmbed;
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde_json::Value;
-
-static PMS_BASE: Lazy<String> = Lazy::new(||
-  var("WG_PMS").expect("Expected a \"WG_PMS\" in the envvar but none was found")
-);
 
 #[derive(Deserialize)]
 struct MinecraftQueryData {
@@ -114,8 +107,8 @@ pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
 /// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
 pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
-  let pms_asia = &PMS_BASE;
-  let pms_eu = PMS_BASE.replace("asia", "eu");
+  let pms_asia = token_path().await.wg_pms;
+  let pms_eu = pms_asia.replace("asia", "eu");
   let embed = CreateEmbed::new().color(EMBED_COLOR);
 
   let (servers_asia, servers_eu) = join!(pms_serverstatus(&pms_asia), pms_serverstatus(&pms_eu));
