@@ -59,7 +59,6 @@ async fn on_ready(
 
 #[tokio::main]
 async fn main() {
-  let token = var("DISCORD_TOKEN").expect("Expected a \"DISCORD_TOKEN\" in the envvar but none was found");
   let db = controllers::database::DatabaseController::new().await.expect("Failed to connect to database");
 
   let framework = poise::Framework::builder()
@@ -91,7 +90,7 @@ async fn main() {
     .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
     .build();
 
-  let mut client = ClientBuilder::new(token, GatewayIntents::GUILDS)
+  let mut client = ClientBuilder::new(internals::utils::token_path().await.main, GatewayIntents::GUILDS)
     .framework(framework)
     .await.expect("Error creating client");
 

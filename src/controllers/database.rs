@@ -1,3 +1,5 @@
+use crate::internals;
+
 use poise::serenity_prelude::prelude::TypeMapKey;
 use tokio_postgres::{Client, NoTls, Error};
 
@@ -11,8 +13,7 @@ impl TypeMapKey for DatabaseController {
 
 impl DatabaseController {
   pub async fn new() -> Result<DatabaseController, Error> {
-    let db_uri = std::env::var("DATABASE_URI").expect("Expected a \"DATABASE_URI\" in the envvar but none was found");
-    let (client, connection) = tokio_postgres::connect(&db_uri, NoTls).await?;
+    let (client, connection) = tokio_postgres::connect(&internals::utils::token_path().await.postgres_uri, NoTls).await?;
 
     tokio::spawn(async move {
       if let Err(e) = connection.await {
