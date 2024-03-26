@@ -9,12 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04-node
     steps:
-      - name: "Add Cargo registry"
-        run: |
-          mkdir -p ~/.cargo && \
-          printf '[registries.gitea]\nindex = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"\ntoken = "Bearer %s"\n' "${{ secrets.CARGO_TOKEN }}" >> ~/.cargo/config.toml
-          cat ~/.cargo/config.toml
-
       - name: Set up Docker environment
         run: |
           apt update && apt upgrade -y && apt install -y apt-transport-https ca-certificates curl zstd gnupg lsb-release
@@ -44,8 +38,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: git.toast-server.net/toast/kon:main
-          cache-to: type=local,dest=/tmp/.build-cache
-          cache-from: type=local,src=/tmp/.buildx-cache,mode=max
+          build-args: |
+            CARGO_TOKEN=${{ secrets.CARGO_TOKEN }}
 
       - name: Update Delivery
         uses: https://github.com/appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
