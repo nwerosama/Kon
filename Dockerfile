@@ -1,4 +1,4 @@
-FROM rust:1.77-alpine3.19@sha256:59aa190ab64f3c65e4335e2781488ee2f3c9b98636824b546a1b410c9e91123a AS compiler
+FROM rust:1.77-alpine3.19@sha256:b6ea81b37c9ad8b2c875f64a963b5e418e86d33d41eed529671e86e86d30c884 AS compiler
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 ARG CARGO_TOKEN
 RUN apk add --no-cache openssl-dev musl-dev 
