@@ -38,10 +38,11 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: git.toast-server.net/toast/kon:main
-          build-args: |
-            CARGO_TOKEN=${{ secrets.CARGO_TOKEN }}
+          build-args: CARGO_TOKEN=${{ secrets.CARGO_TOKEN }}
+          cache-from: type=registry,ref=git.toast-server.net/toast/kon:main
+          cache-to: type=inline,mode=max
 
-      - name: Update Delivery
+      - name: Deploy update
         uses: https://github.com/appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
