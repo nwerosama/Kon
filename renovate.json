@@ -18,6 +18,7 @@
     "branchTopic": "{{{datasource}}}-{{{depName}}}-vulnerability",
     "prCreation": "immediate"
   },
+  "enabled": false,
   "pinDigests": true,
   "ignoreTests": true,
   "pruneStaleBranches": true,
