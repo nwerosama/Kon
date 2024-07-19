@@ -22,6 +22,10 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let mut sys = System::new_all();
   sys.refresh_all();
 
+  // Fetch system's operating system
+  let sys_os_info = os_info::get();
+  let sys_os = format!("{} {}", sys_os_info.os_type(), sys_os_info.version());
+
   // Fetch system's uptime
   let sys_uptime = get().unwrap().as_secs();
 
@@ -37,7 +41,8 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   let stat_msg = vec![
     format!("**{} {}**", _bot.name, BOT_VERSION.as_str()),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
-    format!("Process: `{}`", format_duration(proc_uptime))
+    format!("Process: `{}`", format_duration(proc_uptime)),
+    format!("OS: `{}`", sys_os)
   ];
   ctx.reply(concat_message(stat_msg)).await?;
 

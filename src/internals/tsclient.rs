@@ -1,19 +1,36 @@
-use tokenservice_client::{TokenService, TokenServiceApi};
+use once_cell::sync::Lazy;
+use tokio::sync::RwLock;
+use tokenservice_client::{
+  TokenService,
+  TokenServiceApi
+};
 
-pub struct TSClient {
-  client: TokenService
-}
+static TS_GLOBAL_CACHE: Lazy<RwLock<Option<TokenServiceApi>>> = Lazy::new(|| RwLock::new(None));
+
+pub struct TSClient(TokenService);
 
 impl TSClient {
   pub fn new() -> Self {
     let args: Vec<String> = std::env::args().collect();
-    let service = if args.len() > 1 { args[1].as_str() } else { "kon" };
-    TSClient {
-      client: TokenService::new(service)
-    }
+    let service = if args.len() > 1 { &args[1] } else { "kon" };
+    Self(TokenService::new(service))
   }
-  pub async fn get(&self) -> Result<TokenServiceApi, Box<dyn std::error::Error>> {
-    let api = self.client.connect().await.unwrap();
-    Ok(api)
+
+  pub async fn get(&self) -> Result<TokenServiceApi, crate::Error> {
+    {
+      let cache = TS_GLOBAL_CACHE.read().await;
+      if let Some(ref api) = *cache {
+        return Ok(api.clone());
+      }
+    }
+
+    match self.0.connect().await {
+      Ok(api) => {
+        let mut cache = TS_GLOBAL_CACHE.write().await;
+        *cache = Some(api.clone());
+        Ok(api)
+      }
+      Err(e) => Err(e)
+    }
   }
 }

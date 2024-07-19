@@ -52,5 +52,5 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd kon && docker compose pull bot && \
-            docker compose down bot --remove-orphans && docker compose up -d bot && \
+            docker compose down bot && docker compose up -d bot && \
             docker image prune -f && docker system prune -f

@@ -1,30 +1,26 @@
-use std::sync::Arc;
-use once_cell::sync::Lazy;
+use std::time::Duration;
 use reqwest::{
   Client,
-  header::USER_AGENT
+  Response,
+  Error
 };
 
-static CUSTOM_USER_AGENT: Lazy<String> = Lazy::new(||
-  format!("Kon/{}/Rust", super::utils::BOT_VERSION.as_str())
-);
-
-pub struct HttpClient {
-  client: Arc<Client>
-}
+pub struct HttpClient(Client);
 
 impl HttpClient {
   pub fn new() -> Self {
-    Self {
-      client: Arc::new(Client::new())
-    }
+    Self(Client::new())
   }
 
-  pub async fn get(&self, url: &str) -> Result<reqwest::Response, reqwest::Error> {
-    let req = self.client.get(url)
-      .header(USER_AGENT, CUSTOM_USER_AGENT.as_str())
+  pub async fn get(&self, url: &str, ua: &str) -> Result<Response, Error> {
+    Ok(
+      self.0.get(url).header(
+        reqwest::header::USER_AGENT,
+        format!("Kon ({}) - {}/reqwest", super::utils::BOT_VERSION.as_str(), ua)
+      )
+      .timeout(Duration::from_secs(15))
       .send()
-      .await?;
-    Ok(req)
+      .await?
+    )
   }
 }
