@@ -18,7 +18,7 @@ COPY . .
 RUN cargo build -rF production
 
 FROM alpine:3.20
-RUN apk add --no-cache libgcc
+RUN apk add --no-cache libgcc fluidsynth
 WORKDIR /kon
 COPY --from=builder /usr/src/kon/target/release/kon .
 CMD [ "./kon" ]

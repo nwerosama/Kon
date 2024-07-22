@@ -98,6 +98,7 @@ async fn main() {
       commands: vec![
         commands::ping::ping(),
         commands::status::status(),
+        commands::midi::midi_to_wav(),
         commands::uptime::uptime()
       ],
       pre_command: |ctx| Box::pin(async move {
