@@ -6,7 +6,10 @@ mod internals;
 
 use crate::{
   internals::{
-    utils::token_path,
+    utils::{
+      token_path,
+      mention_dev
+    },
     config::BINARY_PROPERTIES
   },
   // controllers::database::DatabaseController
@@ -25,7 +28,6 @@ use poise::serenity_prelude::{
   ClientBuilder,
   ChannelId,
   Command,
-  UserId,
   GatewayIntents
 };
 
@@ -113,12 +115,8 @@ async fn main() {
           poise::FrameworkError::Command { error, ctx, .. } => {
             println!("PoiseCommandError({}): {}", ctx.command().qualified_name, error);
             ctx.reply(format!(
-              "Encountered an error during command execution, ask **{}** to check console for more details!",
-              UserId::new(BINARY_PROPERTIES.developers[0])
-                .to_user(&ctx.http())
-                .await.expect("Error getting user")
-                .nick_in(&ctx.http(), BINARY_PROPERTIES.guild_id)
-                .await.expect("Error getting nickname")
+              "Encountered an error during command execution, ask {} to check console for more details!",
+              mention_dev(ctx).unwrap_or_default()
             )).await.expect("Error sending message");
           },
           poise::FrameworkError::EventHandler { error, event, .. } => println!("PoiseEventHandlerError({}): {}", event.snake_case_name(), error),
