@@ -1,4 +1,4 @@
-FROM rust:1.79-alpine3.20 AS chef
+FROM rust:1.80-alpine3.20 AS chef
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 ARG CARGO_TOKEN
 RUN apk add --no-cache openssl-dev musl-dev

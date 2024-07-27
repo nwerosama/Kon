@@ -1,10 +1,10 @@
 use poise::serenity_prelude::UserId;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tokio::sync::Mutex;
 use tokenservice_client::TokenServiceApi;
 use super::tsclient::TSClient;
 
-pub static BOT_VERSION: Lazy<String> = Lazy::new(|| {
+pub static BOT_VERSION: LazyLock<String> = LazyLock::new(|| {
   let cargo_version = cargo_toml::Manifest::from_str(&include_str!("../../Cargo.toml"))
     .unwrap()
     .package
@@ -14,7 +14,7 @@ pub static BOT_VERSION: Lazy<String> = Lazy::new(|| {
   format!("v{}", cargo_version)
 });
 
-static TSCLIENT: Lazy<Mutex<TSClient>> = Lazy::new(|| Mutex::new(TSClient::new()));
+static TSCLIENT: LazyLock<Mutex<TSClient>> = LazyLock::new(|| Mutex::new(TSClient::new()));
 
 pub async fn token_path() -> TokenServiceApi {
   TSCLIENT.lock().await.get().await.unwrap()

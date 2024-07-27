@@ -1,11 +1,18 @@
 services:
   bot:
     container_name: kon
-    #image: 'git.toast-server.net/toast/kon:main'
+    #image: git.toast-server.net/toast/kon:main
     build: .
     restart: unless-stopped
-#    depends_on:
-#      - db
+    depends_on:
+      - cache
+  cache:
+    container_name: kon-redis
+    image: redis/redis-stack-server:7.4.0-rc2
+    restart: unless-stopped
+    ports:
+      - 37935:6379/tcp
+
 #  db:
 #    container_name: kon-database
 #    image: postgres:16.2-alpine3.19@sha256:951bfda460300925caa3949eaa092ba022e9aec191bbea9056a39e2382260b27

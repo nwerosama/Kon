@@ -1,6 +1,6 @@
 use crate::internals::utils::token_path;
 
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use bb8::{Pool, PooledConnection};
 use bb8_postgres::PostgresConnectionManager;
 use tokio_postgres::{
@@ -19,7 +19,7 @@ use std::{
   sync::Mutex
 };
 
-pub static DATABASE: Lazy<Mutex<Option<DatabaseController>>> = Lazy::new(|| Mutex::new(None));
+pub static DATABASE: LazyLock<Mutex<Option<DatabaseController>>> = LazyLock::new(|| Mutex::new(None));
 
 pub struct DatabaseController {
   pub pool: Pool<PostgresConnectionManager<NoTls>>

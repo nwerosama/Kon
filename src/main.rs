@@ -15,7 +15,10 @@ use crate::{
   // controllers::database::DatabaseController
 };
 
-use std::error;
+use std::{
+  thread::current,
+  sync::Arc
+};
 use poise::serenity_prelude::{
   builder::{
     CreateMessage,
@@ -31,7 +34,7 @@ use poise::serenity_prelude::{
   GatewayIntents
 };
 
-type Error = Box<dyn error::Error + Send + Sync>;
+type Error = Box<dyn std::error::Error + Send + Sync>;
 
 async fn on_ready(
   ctx: &Context,
@@ -77,13 +80,32 @@ async fn on_ready(
 }
 
 async fn event_processor(
-  _ctx: &Context,
+  ctx: &Context,
   event: &FullEvent,
   _framework: poise::FrameworkContext<'_, (), Error>
 ) -> Result<(), Error> {
   match event {
     FullEvent::Ratelimit { data } => {
       println!("Event[Ratelimit]: {:#?}", data);
+    }
+    FullEvent::Ready { .. } => {
+      let thread_id = format!("{:?}", current().id());
+      let thread_num: String = thread_id.chars().filter(|c| c.is_digit(10)).collect();
+      println!("Event[Ready]: Task Scheduler operating on thread {}", thread_num);
+
+      let ctx = Arc::new(ctx.clone());
+
+      tokio::spawn(async move {
+        match internals::tasks::rss::rss(ctx).await {
+          Ok(_) => {},
+          Err(y) => {
+            eprintln!("TaskScheduler[Main:RSS:Error]: Task execution failed: {}", y);
+            if let Some(source) = y.source() {
+              eprintln!("TaskScheduler[Main:RSS:Error]: Task execution failed caused by: {:#?}", source);
+            }
+          }
+        }
+      });
     }
     _ => {}
   }

@@ -1,11 +1,11 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use tokio::sync::RwLock;
 use tokenservice_client::{
   TokenService,
   TokenServiceApi
 };
 
-static TS_GLOBAL_CACHE: Lazy<RwLock<Option<TokenServiceApi>>> = Lazy::new(|| RwLock::new(None));
+static TS_GLOBAL_CACHE: LazyLock<RwLock<Option<TokenServiceApi>>> = LazyLock::new(|| RwLock::new(None));
 
 pub struct TSClient(TokenService);
 
