@@ -260,7 +260,7 @@ async fn rust_message() -> Result<Option<String>, Error> {
       return Ok(None);
     } else {
       save_to_redis(&rkey, &blog).await?;
-      Ok(Some(format!("Rust Team has put out a new article!\n[{}](<{}>)", article.links[0].title.clone().unwrap(), article.links[0].href)))
+      Ok(Some(format!("Rust Team has put out a new article!\n**[{}](<{}>)**", article.links[0].title.clone().unwrap(), article.links[0].href)))
     }
   } else {
     task_err("RSS:RustBlog", &format!("Article URL does not match the expected RegEx pattern! ({})", article_id));
