@@ -1,6 +1,5 @@
 FROM rust:1.80-alpine3.20 AS chef
 ENV RUSTFLAGS="-C target-feature=-crt-static"
-ARG CARGO_TOKEN
 RUN apk add --no-cache openssl-dev musl-dev
 RUN cargo install cargo-chef
 WORKDIR /usr/src/kon
@@ -8,12 +7,16 @@ WORKDIR /usr/src/kon
 FROM chef AS planner
 COPY . .
 RUN mkdir -p .cargo && \
-  printf '[registries.gitea]\nindex = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"\ntoken = "Bearer %s"\n' "$CARGO_TOKEN" >> .cargo/config.toml
+  printf '[registries.gitea]\nindex = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"' >> .cargo/config.toml
 RUN cargo chef prepare
 
-FROM chef AS builder
+FROM chef AS dependencies
 COPY --from=planner /usr/src/kon/recipe.json recipe.json
 RUN cargo chef cook --release
+
+FROM chef AS builder
+COPY --from=planner /usr/src/kon/.cargo /usr/src/kon/.cargo
+COPY --from=dependencies /usr/src/kon/target /usr/src/kon/target
 COPY . .
 RUN cargo build -rF production
 

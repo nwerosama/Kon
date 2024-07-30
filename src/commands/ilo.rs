@@ -66,6 +66,8 @@ struct Status {
   state: String
 }
 
+const ILO_HOSTNAME: &str = "POMNI";
+
 async fn ilo_data() -> Result<Chassis, ReqError> {
   let client = ClientBuilder::new()
     .danger_accept_invalid_certs(true)
@@ -94,6 +96,7 @@ pub async fn ilo(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
 /// Retrieve data from the HP iLO4 interface
 #[poise::command(slash_command)]
 pub async fn temperature(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+  ctx.defer().await?;
   let data = ilo_data().await.unwrap();
 
   let mut tempdata = String::new();
@@ -133,7 +136,7 @@ pub async fn temperature(ctx: poise::Context<'_, (), Error>) -> Result<(), Error
     CreateEmbed::new()
       .color(BINARY_PROPERTIES.embed_color)
       .timestamp(Timestamp::now())
-      .title("POMNI - HP iLO4 Temperatures")
+      .title(format!("{} - HP iLO4 Temperatures", ILO_HOSTNAME))
       .fields(vec![
         ("Temperatures", tempdata, false),
         ("Fans", fandata, false)
