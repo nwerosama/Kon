@@ -69,8 +69,7 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
 /// Query the server statuses
 #[poise::command(
   slash_command,
-  subcommands("wg"),
-  subcommand_required
+  subcommands("wg")
 )]
 pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
   Ok(())

@@ -120,6 +120,7 @@ async fn main() {
   let framework = poise::Framework::builder()
     .options(poise::FrameworkOptions {
       commands: vec![
+        commands::ilo::ilo(),
         commands::ping::ping(),
         commands::status::status(),
         commands::midi::midi_to_wav(),

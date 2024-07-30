@@ -1014,7 +1014,7 @@ dependencies = [
 
 [[package]]
 name = "kon"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "bb8",
  "bb8-postgres",
@@ -1912,11 +1912,12 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.120"
+version = "1.0.121"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
+checksum = "4ab380d7d9f22ef3f21ad3e6c1ebe8e4fc7a2000ccba2e4d71fc96f15b2cb609"
 dependencies = [
  "itoa",
+ "memchr",
  "ryu",
  "serde",
 ]
@@ -2242,9 +2243,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokenservice-client"
-version = "0.3.2"
+version = "0.3.3"
 source = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"
-checksum = "afce7633f840504c54b2d2dfee881e183543ad8945bedbd86ea8fbaeb498bfb8"
+checksum = "af9294666d8fc39de691f9dd8e919630622af40279dc6c17716359b318edcbb2"
 dependencies = [
  "reqwest 0.12.5",
  "serde",
