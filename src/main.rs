@@ -82,11 +82,39 @@ async fn on_ready(
 async fn event_processor(
   ctx: &Context,
   event: &FullEvent,
-  _framework: poise::FrameworkContext<'_, (), Error>
+  framework: poise::FrameworkContext<'_, (), Error>
 ) -> Result<(), Error> {
   match event {
     FullEvent::Ratelimit { data } => {
       println!("Event[Ratelimit]: {:#?}", data);
+    }
+    FullEvent::Message { new_message } => {
+      if new_message.author.bot || !new_message.guild_id.is_none() {
+        return Ok(());
+      }
+
+      if new_message.content.to_lowercase().starts_with("deploy") && new_message.author.id == BINARY_PROPERTIES.developers[0] {
+        let builder = poise::builtins::create_application_commands(&framework.options().commands);
+        let commands = Command::set_global_commands(&ctx.http, builder).await;
+        let mut commands_deployed = std::collections::HashSet::new();
+      
+        match commands {
+          Ok(cmdmap) => for command in cmdmap.iter() {
+            commands_deployed.insert(command.name.clone());
+          },
+          Err(y) => {
+            eprintln!("Error registering commands: {:?}", y);
+            new_message.reply(&ctx.http, "Deployment failed, check console for more details!").await?;
+          }
+        }
+      
+        if commands_deployed.len() > 0 {
+          new_message.reply(&ctx.http, format!(
+            "Deployed the commands globally:\n- {}",
+            commands_deployed.into_iter().collect::<Vec<_>>().join("\n- ")
+          )).await?;
+        }
+      }
     }
     FullEvent::Ready { .. } => {
       let thread_id = format!("{:?}", current().id());
@@ -162,6 +190,8 @@ async fn main() {
   let mut client = ClientBuilder::new(
     token_path().await.main,
     GatewayIntents::GUILDS
+    | GatewayIntents::MESSAGE_CONTENT
+    | GatewayIntents::DIRECT_MESSAGES
   )
   .framework(framework)
   .await.expect("Error creating client");
