@@ -5,6 +5,7 @@ pub struct ConfigMeta {
   pub embed_color: i32,
   pub ready_notify: u64,
   pub rss_channel: u64,
+  pub kon_logs: u64,
   pub deploy_commands: bool,
   pub developers: Vec<u64>
 }
@@ -29,6 +30,7 @@ impl ConfigMeta {
       embed_color: 0x5a99c7,
       ready_notify: 865673694184996888,
       rss_channel: 865673694184996888,
+      kon_logs: 1268493237912604672,
       deploy_commands: false,
       developers: vec![
         190407856527376384 // toast.ts

@@ -280,8 +280,19 @@ pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
       Ok(Some(embed)) => {
         ChannelId::new(BINARY_PROPERTIES.rss_channel).send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await.unwrap();
       },
-      Ok(None) => (),
-      Err(y) => task_err(&task_name, &y.to_string())
+      Ok(None) => {
+        ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
+          &ctx.http, CreateMessage::new()
+            .content("**[RSS:ESXi]:** Article returned no new content.")
+        ).await.unwrap();
+      },
+      Err(y) => {
+        ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
+          &ctx.http, CreateMessage::new()
+            .content(format!("**[RSS:ESXi:Error]:** Feed failed with the following error:```\n{}\n```", y))
+        ).await.unwrap();
+        task_err(&task_name, &y.to_string())
+      }
     }
 
     match gportal_embed().await {
@@ -290,16 +301,38 @@ pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
           .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
         ).await.unwrap();
       },
-      Ok(None) => (),
-      Err(y) => task_err(&task_name, &y.to_string())
+      Ok(None) => {
+        ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
+          &ctx.http, CreateMessage::new()
+            .content("**[RSS:GPortal]:** Article returned no new content.")
+        ).await.unwrap();
+      },
+      Err(y) => {
+        ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
+          &ctx.http, CreateMessage::new()
+            .content(format!("**[RSS:GPortal:Error]:** Feed failed with the following error:```\n{}\n```", y))
+        ).await.unwrap();
+        task_err(&task_name, &y.to_string())
+      }
     }
 
     match rust_message().await {
       Ok(Some(content)) => {
         ChannelId::new(BINARY_PROPERTIES.rss_channel).send_message(&ctx.http, CreateMessage::new().content(content)).await.unwrap();
       },
-      Ok(None) => (),
-      Err(y) => task_err(&task_name, &y.to_string())
+      Ok(None) => {
+        ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
+          &ctx.http, CreateMessage::new()
+            .content("**[RSS:RustBlog]:** Article returned no new content.")
+        ).await.unwrap();
+      },
+      Err(y) => {
+        ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
+          &ctx.http, CreateMessage::new()
+            .content(format!("**[RSS:RustBlog:Error]:** Feed failed with the following error:```\n{}\n```", y))
+        ).await.unwrap();
+        task_err(&task_name, &y.to_string())
+      }
     }
   }
 }
