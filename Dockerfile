@@ -6,8 +6,6 @@ WORKDIR /usr/src/kon
 
 FROM chef AS planner
 COPY . .
-RUN mkdir -p .cargo && \
-  printf '[registries.gitea]\nindex = "sparse+https://git.toast-server.net/api/packages/toast/cargo/"' >> .cargo/config.toml
 RUN cargo chef prepare
 
 FROM chef AS dependencies
