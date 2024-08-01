@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 bb8 = "0.8.5"
 bb8-postgres = "0.8.1"
-bb8-redis = "0.15.0"
+bb8-redis = "0.16.0"
 cargo_toml = "0.20.4"
 feed-rs = "2.1.0"
 once_cell = "1.19.0"
