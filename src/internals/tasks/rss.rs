@@ -281,7 +281,7 @@ async fn rust_message() -> Result<Option<String>, Error> {
 
 pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
   let task_name = "RSS";
-  let mut interval = interval(Duration::from_secs(900));  
+  let mut interval = interval(Duration::from_secs(900));
   task_info(&task_name, "Task loaded!");
 
   loop {

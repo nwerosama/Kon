@@ -17,7 +17,13 @@ use crate::{
 
 use std::{
   thread::current,
-  sync::Arc
+  sync::{
+    Arc,
+    atomic::{
+      AtomicBool,
+      Ordering
+    }
+  }
 };
 use poise::serenity_prelude::{
   builder::{
@@ -35,6 +41,7 @@ use poise::serenity_prelude::{
 };
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
+static TASK_RUNNING: AtomicBool = AtomicBool::new(false);
 
 async fn on_ready(
   ctx: &Context,
@@ -97,7 +104,7 @@ async fn event_processor(
         let builder = poise::builtins::create_application_commands(&framework.options().commands);
         let commands = Command::set_global_commands(&ctx.http, builder).await;
         let mut commands_deployed = std::collections::HashSet::new();
-      
+
         match commands {
           Ok(cmdmap) => for command in cmdmap.iter() {
             commands_deployed.insert(command.name.clone());
@@ -107,7 +114,7 @@ async fn event_processor(
             new_message.reply(&ctx.http, "Deployment failed, check console for more details!").await?;
           }
         }
-      
+
         if commands_deployed.len() > 0 {
           new_message.reply(&ctx.http, format!(
             "Deployed the commands globally:\n- {}",
@@ -123,17 +130,24 @@ async fn event_processor(
 
       let ctx = Arc::new(ctx.clone());
 
-      tokio::spawn(async move {
-        match internals::tasks::rss::rss(ctx).await {
-          Ok(_) => {},
-          Err(y) => {
-            eprintln!("TaskScheduler[Main:RSS:Error]: Task execution failed: {}", y);
-            if let Some(source) = y.source() {
-              eprintln!("TaskScheduler[Main:RSS:Error]: Task execution failed caused by: {:#?}", source);
+      if !TASK_RUNNING.load(Ordering::SeqCst) {
+        TASK_RUNNING.store(true, Ordering::SeqCst);
+
+        tokio::spawn(async move {
+          match internals::tasks::rss::rss(ctx).await {
+            Ok(_) => {},
+            Err(y) => {
+              eprintln!("TaskScheduler[Main:RSS:Error]: Task execution failed: {}", y);
+              if let Some(source) = y.source() {
+                eprintln!("TaskScheduler[Main:RSS:Error]: Task execution failed caused by: {:#?}", source);
+              }
             }
           }
-        }
-      });
+          TASK_RUNNING.store(false, Ordering::SeqCst);
+        });
+      } else {
+        println!("TaskScheduler[Main:RSS:Notice]: Another thread is already running this task, ignoring");
+      }
     }
     _ => {}
   }
