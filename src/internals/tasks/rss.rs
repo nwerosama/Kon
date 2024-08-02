@@ -22,6 +22,7 @@ use std::{
 use poise::serenity_prelude::{
   Context,
   ChannelId,
+  EditMessage,
   CreateMessage,
   CreateEmbed,
   CreateEmbedAuthor,
@@ -46,6 +47,12 @@ async fn get_redis() -> Arc<RedisController> {
   }
   REDIS_SERVICE.get().unwrap().clone()
 }
+
+  // Moved up here as a copy-paste
+
+  //  This is for building up the embed with the feed data
+  // std::fs::File::create("rss_name.log").unwrap();
+  // std::fs::write("rss_name.log", format!("{:#?}", feed))?;
 
 fn format_href_to_discord(input: &str) -> String {
   let re = Regex::new(r#"<a href="([^"]+)">([^<]+)</a>"#).unwrap();
@@ -126,10 +133,6 @@ async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
     }
   }
 
-  //  This is for building up the embed with the feed data
-  // std::fs::File::create("esxi_atom.log").unwrap();
-  // std::fs::write("esxi_atom.log", format!("{:#?}", feed))?;
-
   let cached_patch = redis.get(&rkey).await.unwrap().unwrap_or_default();
 
   if cached_patch.is_empty() {
@@ -169,6 +172,7 @@ async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
 async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
   let redis = get_redis().await;
   let rkey = "RSS_GPortal";
+  let rkey_content = format!("{}_Content", rkey);
   let url = "https://status.g-portal.com/history.atom";
 
   let res = fetch_feed(url).await?;
@@ -189,14 +193,12 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
     }
   }
 
-  //  This is for building up the embed with the feed data
-  // std::fs::File::create("gportal.log").unwrap();
-  // std::fs::write("gportal.log", format!("{:#?}", feed))?;
-
   let cached_incident = redis.get(&rkey).await.unwrap().unwrap_or_default();
+  let new_content = format_html_to_discord(article.content.unwrap().body.unwrap());
 
   if cached_incident.is_empty() {
-    redis.set(&rkey, get_incident_id(&article.links[0].href).unwrap().as_str()).await.unwrap();
+    redis.set(&rkey, &get_incident_id(&article.links[0].href).unwrap()).await.unwrap();
+    redis.set(&rkey_content, &new_content).await.unwrap();
     if let Err(y) = redis.expire(&rkey, REDIS_EXPIRY_SECS).await {
       task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
     }
@@ -205,17 +207,30 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
 
   if let Some(incident) = get_incident_id(&article.links[0].href) {
     if incident == cached_incident {
-      return Ok(None);
+      let cached_content: String = redis.get(&format!("{}_content", rkey)).await.unwrap().unwrap_or_default();
+      if cached_content == new_content {
+        return Ok(None);
+      } else {
+        redis.set(&rkey_content, &new_content).await.unwrap();
+        redis.expire(&rkey_content, 21600).await.unwrap();
+        return Ok(Some(CreateEmbed::new()
+          .color(0xC23EE8)
+          .title(article.title.unwrap().content)
+          .url(incident_page)
+          .description(new_content)
+          .timestamp(Timestamp::from(article.updated.unwrap()))
+        ));
+      }
     } else {
       save_to_redis(&rkey, &incident).await?;
-      Ok(Some(CreateEmbed::new()
+      redis.set(&rkey_content, &new_content).await.unwrap();
+      return Ok(Some(CreateEmbed::new()
         .color(0xC23EE8)
         .title(article.title.unwrap().content)
         .url(incident_page)
-        .description(format!("{}", format_html_to_discord(article.content.unwrap().body.unwrap())
-        ))
-        .timestamp(Timestamp::from(article.updated.unwrap())))
-      )
+        .description(new_content)
+        .timestamp(Timestamp::from(article.updated.unwrap()))
+      ));
     }
   } else {
     task_err("RSS:GPortal", &format!("Incident ID does not match the expected RegEx pattern! ({})", &article.links[0].href));
@@ -240,10 +255,6 @@ async fn rust_message() -> Result<Option<String>, Error> {
     let re = Regex::new(r"https://blog\.rust-lang\.org/(\d{4}/\d{2}/\d{2}/[^/]+)").unwrap();
     re.captures(input.as_str()).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
   }
-
-  //  This is for building up the message with the feed data
-  // std::fs::File::create("rustblog.log").unwrap();
-  // std::fs::write("rustblog.log", format!("{:#?}", feed))?;
 
   let cached_blog = redis.get(&rkey).await.unwrap().unwrap_or_default();
 
@@ -292,9 +303,26 @@ pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
 
     match gportal_embed().await {
       Ok(Some(embed)) => {
-        ChannelId::new(BINARY_PROPERTIES.rss_channel).send_message(&ctx.http, CreateMessage::new()
-          .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
-        ).await.unwrap();
+        let redis = get_redis().await;
+        let rkey = "RSS_GPortal_MsgID";
+        let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
+
+        // Check if the message ID is in Redis
+        if let Ok(Some(msg_id_key)) = redis.get(&rkey).await {
+          if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+            // Attempt to edit the message
+            if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
+              message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
+            }
+          } else {
+            // If the message is not found or invalid ID, send a new message instead
+            let message = channel.send_message(&ctx.http, CreateMessage::new()
+              .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
+            ).await.unwrap();
+            redis.set(&rkey, &message.id.to_string()).await.unwrap();
+            redis.expire(&rkey, 36000).await.unwrap();
+          }
+        }
       },
       Ok(None) => {
         log_msgs.push("**[RSS:GPortal]:** Article returned no new content.".to_string());
