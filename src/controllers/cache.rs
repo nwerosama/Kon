@@ -1,6 +1,5 @@
 use crate::internals::utils::token_path;
 
-use poise::serenity_prelude::prelude::TypeMapKey;
 use bb8_redis::{
   bb8::Pool,
   redis::cmd,
@@ -17,10 +16,6 @@ use tokio::time::{
 #[derive(Debug)]
 pub struct RedisController {
   pool: Pool<RedisConnectionManager>
-}
-
-impl TypeMapKey for RedisController {
-  type Value = RedisController;
 }
 
 impl RedisController {
