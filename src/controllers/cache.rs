@@ -9,8 +9,8 @@ use bb8_redis::{
   RedisConnectionManager
 };
 use tokio::time::{
-  sleep,
-  Duration
+  Duration,
+  sleep
 };
 
 #[derive(Debug)]
