@@ -1,9 +1,10 @@
 use crate::{
   Error,
+  GIT_COMMIT_HASH,
   internals::utils::{
+    BOT_VERSION,
     format_duration,
-    concat_message,
-    BOT_VERSION
+    concat_message
   }
 };
 
@@ -69,7 +70,7 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   }
 
   let stat_msg = vec![
-    format!("**{} {}**", _bot.name, BOT_VERSION.as_str()),
+    format!("**{} {}** `{}`", _bot.name, BOT_VERSION.as_str(), GIT_COMMIT_HASH),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
     format!("Process: `{}`", format_duration(proc_uptime)),
     format!("CPU: `{}`", format!("{}", cpu[0].brand())),

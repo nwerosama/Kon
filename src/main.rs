@@ -7,6 +7,7 @@ mod internals;
 use crate::{
   internals::{
     utils::{
+      BOT_VERSION,
       token_path,
       mention_dev
     },
@@ -43,6 +44,10 @@ use poise::serenity_prelude::{
 type Error = Box<dyn std::error::Error + Send + Sync>;
 static TASK_RUNNING: AtomicBool = AtomicBool::new(false);
 
+#[cfg(feature = "production")]
+pub static GIT_COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
+pub static GIT_COMMIT_HASH: &str = "devel";
+
 async fn on_ready(
   ctx: &Context,
   ready: &Ready,
@@ -56,6 +61,7 @@ async fn on_ready(
     println!("Event[Ready][Notice]: Session limit: {}/{}", session.remaining, session.total);
   }
 
+  println!("Event[Ready]: Build version: {} ({})", BOT_VERSION.to_string(), GIT_COMMIT_HASH);
   println!("Event[Ready]: Connected to API as {}", ready.user.name);
 
   let message = CreateMessage::new();
@@ -173,7 +179,7 @@ async fn main() {
           Some(guild) => guild.name.clone(),
           None => String::from("Direct Message")
         };
-        println!("Discord[{}] {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name);
+        println!("Discord[{}]: {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name);
       }),
       on_error: |error| Box::pin(async move {
         match error {

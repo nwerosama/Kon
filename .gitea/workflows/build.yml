@@ -36,6 +36,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
+          args: GIT_HASH=${{ env.GITHUB_SHA }}
           push: true
           tags: git.toast-server.net/toast/kon:main
           build-args: CARGO_TOKEN=${{ secrets.CARGO_TOKEN }}

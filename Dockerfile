@@ -1,5 +1,7 @@
 FROM rust:1.80-alpine3.20 AS chef
 ENV RUSTFLAGS="-C target-feature=-crt-static"
+ARG GIT_HASH
+ENV GIT_COMMIT_HASH=${GIT_HASH}
 RUN apk add --no-cache openssl-dev musl-dev
 RUN cargo install cargo-chef
 WORKDIR /builder
