@@ -46,6 +46,7 @@ static TASK_RUNNING: AtomicBool = AtomicBool::new(false);
 
 #[cfg(feature = "production")]
 pub static GIT_COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
+#[cfg(not(feature = "production"))]
 pub static GIT_COMMIT_HASH: &str = "devel";
 
 async fn on_ready(
