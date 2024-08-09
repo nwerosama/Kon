@@ -126,12 +126,19 @@ struct Hp {
   post_state: String
 }
 
+#[derive(Serialize, Deserialize)]
+struct Event {
+  #[serde(rename = "Status")]
+  status: Status
+}
+
 const ILO_HOSTNAME: &str = "POMNI";
 
 enum RedfishEndpoint {
   Thermal,
   Power,
-  System
+  System,
+  EventService
 }
 
 impl RedfishEndpoint {
@@ -139,7 +146,8 @@ impl RedfishEndpoint {
     match self {
       RedfishEndpoint::Thermal => "Chassis/1/Thermal".to_string(),
       RedfishEndpoint::Power => "Chassis/1/Power".to_string(),
-      RedfishEndpoint::System => "Systems/1".to_string()
+      RedfishEndpoint::System => "Systems/1".to_string(),
+      RedfishEndpoint::EventService => "EventService".to_string()
     }
   }
 }
@@ -167,6 +175,10 @@ async fn ilo_data(endpoint: RedfishEndpoint) -> Result<Box<dyn std::any::Any + S
     }
     RedfishEndpoint::System => {
       let body: System = res.json().await.unwrap();
+      Ok(Box::new(body))
+    }
+    RedfishEndpoint::EventService => {
+      let body: Event = res.json().await.unwrap();
       Ok(Box::new(body))
     }
   }
@@ -262,32 +274,44 @@ pub async fn power(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
 #[poise::command(slash_command)]
 pub async fn system(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   ctx.defer().await?;
-  let ilo = ilo_data(RedfishEndpoint::System).await.unwrap();
-  let data = ilo.downcast_ref::<System>().unwrap();
 
-  let mut bios_data = String::new();
+  let (ilo_sys, ilo_event) = tokio::join!(
+    ilo_data(RedfishEndpoint::System),
+    ilo_data(RedfishEndpoint::EventService)
+  );
 
-  let post_state = match data.oem.hp.post_state.as_str() {
+  let ilo_sys = ilo_sys.unwrap();
+  let ilo_event = ilo_event.unwrap();
+
+  let system_data = ilo_sys.downcast_ref::<System>().unwrap();
+  let event_data = ilo_event.downcast_ref::<Event>().unwrap();
+
+  let mut data = String::new();
+
+  let post_state = match system_data.oem.hp.post_state.as_str() {
     "FinishedPost" => "Finished POST",
-    _ => "???"
+    "InPost" => "In POST (Booting)",
+    "PowerOff" => "Powered off",
+    _ => "Unknown State"
   };
-  if data.oem.hp.post_state != "FinishedPost" {
-    println!("iLO:PostState = {}", data.oem.hp.post_state);
+  if system_data.oem.hp.post_state != "FinishedPost" {
+    println!("iLO:PostState = {}", system_data.oem.hp.post_state);
   }
 
-  bios_data.push_str(&format!("**POST:** `{}`\n", post_state));
-  bios_data.push_str(&format!("**Power:** `{}`\n", &data.power_state));
-  bios_data.push_str(&format!("**Model:** `{}`", &data.model));
+  data.push_str(&format!("**Health:** `{}`\n", event_data.status.health.as_ref().unwrap_or(&"Unknown".to_string())));
+  data.push_str(&format!("**POST:** `{}`\n", post_state));
+  data.push_str(&format!("**Power:** `{}`\n", &system_data.power_state));
+  data.push_str(&format!("**Model:** `{}`", &system_data.model));
 
   ctx.send(CreateReply::default().embed(
     CreateEmbed::new()
       .color(BINARY_PROPERTIES.embed_color)
       .timestamp(Timestamp::now())
       .title(format!("{} - System", ILO_HOSTNAME))
-      .description(bios_data)
+      .description(data)
       .fields(vec![
-        (format!("CPU ({}x)", data.processor_summary.count), data.processor_summary.cpu.trim().to_string(), true),
-        ("RAM".to_string(), format!("{} GB", data.memory.total_system_memory), true)
+        (format!("CPU ({}x)", system_data.processor_summary.count), system_data.processor_summary.cpu.trim().to_string(), true),
+        ("RAM".to_string(), format!("{} GB", system_data.memory.total_system_memory), true)
       ])
   )).await?;
 
