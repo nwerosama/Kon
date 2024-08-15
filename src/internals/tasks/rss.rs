@@ -123,7 +123,7 @@ fn embed(
     .timestamp(timestamp)
 }
 
-const MAX_CONTENT_LENGTH: usize = 2048;
+const MAX_CONTENT_LENGTH: usize = 4000;
 fn trim_old_content(s: &str) -> String {
   if s.len() > MAX_CONTENT_LENGTH {
     s[..MAX_CONTENT_LENGTH].to_string()
@@ -220,20 +220,25 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
   let cached_incident = redis.get(&rkey).await.unwrap().unwrap_or_default();
   let new_content = format_html_to_discord(article.content.unwrap().body.unwrap());
 
-  let mut color: u32 = 0x243C32;
+  let color: u32;
   let update_patt = Regex::new(r"(?i)\bupdate\b").unwrap();
   let investigating_patt = Regex::new(r"(?i)\binvestigating\b").unwrap();
   let monitoring_patt = Regex::new(r"(?i)\bmonitoring\b").unwrap();
   let resolved_patt = Regex::new(r"(?i)\bresolved\b").unwrap();
+  let date_patt = Regex::new(r"\b[A-Z][a-z]{2} \d{2}, \d{2}:\d{2} UTC\b").unwrap();
 
-  if update_patt.is_match(&new_content) {
+  let first_entry = date_patt.split(&new_content).next().unwrap_or(&new_content);
+
+  if update_patt.is_match(&first_entry) {
     color = 0xFFAD33;
-  } else if investigating_patt.is_match(&new_content) {
+  } else if investigating_patt.is_match(&first_entry) {
     color = 0x16AAEB;
-  } else if monitoring_patt.is_match(&new_content) {
+  } else if monitoring_patt.is_match(&first_entry) {
     color = 0x243C32;
-  } else if resolved_patt.is_match(&new_content) {
+  } else if resolved_patt.is_match(&first_entry) {
     color = 0x57F287;
+  } else {
+    color = 0x243C32;
   }
 
   if cached_incident.is_empty() {
@@ -257,7 +262,7 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
           color,
           article.title.unwrap().content,
           incident_page,
-          new_content,
+          trim_old_content(&new_content),
           Timestamp::from(article.updated.unwrap())
         )));
       }
@@ -268,7 +273,7 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
         color,
         article.title.unwrap().content,
         incident_page,
-        new_content,
+        trim_old_content(&new_content),
         Timestamp::from(article.updated.unwrap())
       )));
     }
@@ -289,7 +294,7 @@ async fn github_embed() -> Result<Option<CreateEmbed>, Error> {
   let cursor = Cursor::new(data);
 
   let feed = parse(cursor).unwrap();
-  let incident_page = feed.links[0].clone().href;
+  let incident_page = feed.entries[0].links[0].clone().href;
   let article = feed.entries[0].clone();
 
   fn get_incident_id(input: &str) -> Option<String> {
@@ -305,14 +310,19 @@ async fn github_embed() -> Result<Option<CreateEmbed>, Error> {
   let cached_incident = redis.get(&rkey).await.unwrap().unwrap_or_default();
   let new_content = format_html_to_discord(article.content.unwrap().body.unwrap());
 
-  let mut color: u32 = 0x243C32;
+  let color: u32;
   let update_patt = Regex::new(r"(?i)\bupdate\b").unwrap();
   let resolved_patt = Regex::new(r"(?i)\bresolved\b").unwrap();
+  let date_patt = Regex::new(r"\b[A-Z][a-z]{2} \d{2}, \d{2}:\d{2} UTC\b").unwrap();
 
-  if update_patt.is_match(&new_content) {
+  let first_entry = date_patt.split(&new_content).next().unwrap_or(&new_content);
+
+  if update_patt.is_match(&first_entry) {
     color = 0xFFAD33;
-  } else if resolved_patt.is_match(&new_content) {
+  } else if resolved_patt.is_match(&first_entry) {
     color = 0x57F287;
+  } else {
+    color = 0x243C32;
   }
 
   if cached_incident.is_empty() {
