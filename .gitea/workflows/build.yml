@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Set up Docker environment
         run: |
@@ -42,6 +42,10 @@ jobs:
           cache-from: type=registry,ref=git.toast-server.net/toast/kon:_cache_
           cache-to: type=registry,ref=git.toast-server.net/toast/kon:_cache_,mode=max
 
+  deploy:
+    runs-on: alpine-latest
+    needs: build
+    steps:
       - name: Deploy update
         uses: https://github.com/appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
