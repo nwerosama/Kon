@@ -39,8 +39,8 @@ jobs:
           push: true
           tags: git.toast-server.net/toast/kon:main
           build-args: GIT_HASH=${{ env.GITHUB_SHA }}
-          cache-from: type=registry,ref=git.toast-server.net/toast/kon:_cache_
-          cache-to: type=registry,ref=git.toast-server.net/toast/kon:_cache_,mode=max
+          cache-from: type=registry,ref=git.toast-server.net/toast/kon:main
+          cache-to: type=inline
 
   deploy:
     runs-on: alpine-latest
