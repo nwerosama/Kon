@@ -72,6 +72,11 @@ impl RedisController {
     conn.get(key).await
   }
 
+  pub async fn del(&self, key: &str) -> RedisResult<()> {
+    let mut conn = self.pool.get().await.unwrap();
+    conn.del(key).await
+  }
+
   /// Set a key with a value in the cache
   pub async fn set(&self, key: &str, value: &str) -> RedisResult<()> {
     let mut conn = self.pool.get().await.unwrap();
