@@ -5,6 +5,8 @@ use reqwest::{
   Error
 };
 
+const ERROR_PREFIX: &str = "HTTPClient[Error]:";
+
 pub struct HttpClient(Client);
 
 impl HttpClient {
@@ -13,14 +15,25 @@ impl HttpClient {
   }
 
   pub async fn get(&self, url: &str, ua: &str) -> Result<Response, Error> {
-    Ok(
-      self.0.get(url).header(
+    let response = self.0.get(url).header(
         reqwest::header::USER_AGENT,
-        format!("Kon ({}) - {}/reqwest", super::utils::BOT_VERSION.as_str(), ua)
+        format!("Kon ({}-{}) - {}/reqwest", super::utils::BOT_VERSION.as_str(), crate::GIT_COMMIT_HASH, ua)
       )
-      .timeout(Duration::from_secs(15))
+      .timeout(Duration::from_secs(30))
       .send()
-      .await?
-    )
+      .await;
+
+    match response {
+      Ok(res) => Ok(res),
+      Err(y) if y.is_timeout() => {
+        eprintln!("{ERROR_PREFIX} Request timed out for \"{}\"", url);
+        Err(y)
+      },
+      Err(y) if y.is_connect() => {
+        eprintln!("{ERROR_PREFIX} Connection failed for \"{}\"", url);
+        Err(y)
+      },
+      Err(y) => Err(y)
+    }
   }
 }

@@ -108,6 +108,30 @@ async fn save_to_redis(key: &str, value: &str) -> Result<(), Error> {
   Ok(())
 }
 
+fn embed(
+  color: u32,
+  title: String,
+  url: String,
+  description: String,
+  timestamp: Timestamp
+) -> CreateEmbed {
+  CreateEmbed::new()
+    .color(color)
+    .title(title)
+    .url(url)
+    .description(description)
+    .timestamp(timestamp)
+}
+
+const MAX_CONTENT_LENGTH: usize = 2048;
+fn trim_old_content(s: &str) -> String {
+  if s.len() > MAX_CONTENT_LENGTH {
+    s[..MAX_CONTENT_LENGTH].to_string()
+  } else {
+    s.to_string()
+  }
+}
+
 async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
   let redis = get_redis().await;
   let rkey = "RSS_ESXi";
@@ -196,6 +220,22 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
   let cached_incident = redis.get(&rkey).await.unwrap().unwrap_or_default();
   let new_content = format_html_to_discord(article.content.unwrap().body.unwrap());
 
+  let mut color: u32 = 0x243C32;
+  let update_patt = Regex::new(r"(?i)\bupdate\b").unwrap();
+  let investigating_patt = Regex::new(r"(?i)\binvestigating\b").unwrap();
+  let monitoring_patt = Regex::new(r"(?i)\bmonitoring\b").unwrap();
+  let resolved_patt = Regex::new(r"(?i)\bresolved\b").unwrap();
+
+  if update_patt.is_match(&new_content) {
+    color = 0xFFAD33;
+  } else if investigating_patt.is_match(&new_content) {
+    color = 0x16AAEB;
+  } else if monitoring_patt.is_match(&new_content) {
+    color = 0x243C32;
+  } else if resolved_patt.is_match(&new_content) {
+    color = 0x57F287;
+  }
+
   if cached_incident.is_empty() {
     redis.set(&rkey, &get_incident_id(&article.links[0].href).unwrap()).await.unwrap();
     redis.set(&rkey_content, &new_content).await.unwrap();
@@ -207,33 +247,112 @@ async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
 
   if let Some(incident) = get_incident_id(&article.links[0].href) {
     if incident == cached_incident {
-      let cached_content: String = redis.get(&format!("{}_content", rkey)).await.unwrap().unwrap_or_default();
+      let cached_content: String = redis.get(&rkey_content).await.unwrap().unwrap_or_default();
       if cached_content == new_content {
         return Ok(None);
       } else {
         redis.set(&rkey_content, &new_content).await.unwrap();
         redis.expire(&rkey_content, 21600).await.unwrap();
-        return Ok(Some(CreateEmbed::new()
-          .color(0xC23EE8)
-          .title(article.title.unwrap().content)
-          .url(incident_page)
-          .description(new_content)
-          .timestamp(Timestamp::from(article.updated.unwrap()))
-        ));
+        return Ok(Some(embed(
+          color,
+          article.title.unwrap().content,
+          incident_page,
+          new_content,
+          Timestamp::from(article.updated.unwrap())
+        )));
       }
     } else {
       save_to_redis(&rkey, &incident).await?;
       redis.set(&rkey_content, &new_content).await.unwrap();
-      return Ok(Some(CreateEmbed::new()
-        .color(0xC23EE8)
-        .title(article.title.unwrap().content)
-        .url(incident_page)
-        .description(new_content)
-        .timestamp(Timestamp::from(article.updated.unwrap()))
-      ));
+      return Ok(Some(embed(
+        color,
+        article.title.unwrap().content,
+        incident_page,
+        new_content,
+        Timestamp::from(article.updated.unwrap())
+      )));
     }
   } else {
     task_err("RSS:GPortal", &format!("Incident ID does not match the expected RegEx pattern! ({})", &article.links[0].href));
+    Ok(None)
+  }
+}
+
+async fn github_embed() -> Result<Option<CreateEmbed>, Error> {
+  let redis = get_redis().await;
+  let rkey = "RSS_GitHub";
+  let rkey_content = format!("{}_Content", rkey);
+  let url = "https://www.githubstatus.com/history.atom";
+
+  let res = fetch_feed(url).await?;
+  let data = res.text().await?;
+  let cursor = Cursor::new(data);
+
+  let feed = parse(cursor).unwrap();
+  let incident_page = feed.links[0].clone().href;
+  let article = feed.entries[0].clone();
+
+  fn get_incident_id(input: &str) -> Option<String> {
+    let re = Regex::new(r#"/incidents/([a-zA-Z0-9]+)$"#).unwrap();
+
+    if let Some(caps) = re.captures(input) {
+      Some(caps[1].to_string())
+    } else {
+      None
+    }
+  }
+
+  let cached_incident = redis.get(&rkey).await.unwrap().unwrap_or_default();
+  let new_content = format_html_to_discord(article.content.unwrap().body.unwrap());
+
+  let mut color: u32 = 0x243C32;
+  let update_patt = Regex::new(r"(?i)\bupdate\b").unwrap();
+  let resolved_patt = Regex::new(r"(?i)\bresolved\b").unwrap();
+
+  if update_patt.is_match(&new_content) {
+    color = 0xFFAD33;
+  } else if resolved_patt.is_match(&new_content) {
+    color = 0x57F287;
+  }
+
+  if cached_incident.is_empty() {
+    redis.set(&rkey, &get_incident_id(&article.links[0].href).unwrap()).await.unwrap();
+    redis.set(&rkey_content, &new_content).await.unwrap();
+    if let Err(y) = redis.expire(&rkey, REDIS_EXPIRY_SECS).await {
+      task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
+    }
+    return Ok(None);
+  }
+
+  if let Some(incident) = get_incident_id(&article.links[0].href) {
+    if incident == cached_incident {
+      let cached_content: String = redis.get(&rkey_content).await.unwrap().unwrap_or_default();
+      if cached_content == new_content {
+        return Ok(None);
+      } else {
+        redis.set(&rkey_content, &new_content).await.unwrap();
+        redis.expire(&rkey_content, 21600).await.unwrap();
+        return Ok(Some(embed(
+          color,
+          article.title.unwrap().content,
+          incident_page,
+          trim_old_content(&new_content),
+          Timestamp::from(article.updated.unwrap())
+        )));
+      }
+    } else {
+      save_to_redis(&rkey, &incident).await?;
+      redis.set(&rkey_content, &new_content).await.unwrap();
+      return Ok(Some(embed(
+        color,
+        article.title.unwrap().content,
+        incident_page,
+        trim_old_content(&new_content),
+        Timestamp::from(article.updated.unwrap())
+      )));
+    }
+  } else {
+    task_err("RSS:GitHub", &format!("Incident ID does not match the expected RegEx pattern! ({})", &article.links[0].href));
     Ok(None)
   }
 }
@@ -281,7 +400,10 @@ async fn rust_message() -> Result<Option<String>, Error> {
 
 pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
   let task_name = "RSS";
-  let mut interval = interval(Duration::from_secs(900));
+  #[cfg(feature = "production")]
+  let mut interval = interval(Duration::from_secs(300)); // Check feeds every 5 mins
+  #[cfg(not(feature = "production"))]
+  let mut interval = interval(Duration::from_secs(30)); // Check feeds every 30 secs
   task_info(&task_name, "Task loaded!");
 
   loop {
@@ -306,17 +428,77 @@ pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
         let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
 
         // Check if the message ID is in Redis
-        if let Ok(Some(msg_id_key)) = redis.get(&rkey).await {
-          if let Ok(msg_id) = msg_id_key.parse::<u64>() {
-            // Attempt to edit the message
-            if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
-              message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
+        match redis.get(&rkey).await {
+          Ok(Some(msg_id_key)) => {
+            // Fetch the cached content
+            let cached_content: Option<String> = redis.get("RSS_GPortal_Content").await.unwrap_or(None);
+
+            if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+              // Attempt to edit the message
+              if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
+                let new_desc = message.embeds[0].description.clone().unwrap();
+
+                if cached_content.as_deref() != Some(&new_desc) {
+                  message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
+                }
+              }
+            } else {
+              // If the message is invalid ID, send a new message instead
+              let message = channel.send_message(&ctx.http, CreateMessage::new()
+                .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
+              ).await.unwrap();
+              redis.set(&rkey, &message.id.to_string()).await.unwrap();
+              redis.expire(&rkey, 36000).await.unwrap();
             }
-          } else {
-            // If the message is not found or invalid ID, send a new message instead
-            let message = channel.send_message(&ctx.http, CreateMessage::new()
-              .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
-            ).await.unwrap();
+          },
+          Ok(None) | Err(_) => {
+              // If the message is not found, send a new message instead
+              let message = channel.send_message(&ctx.http, CreateMessage::new()
+                .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
+              ).await.unwrap();
+              redis.set(&rkey, &message.id.to_string()).await.unwrap();
+              redis.expire(&rkey, 36000).await.unwrap();
+          }
+        }
+      },
+      Ok(None) => (),
+      Err(y) => {
+        log_msgs.push(format!("**[RSS:GPortal:Error]:** Feed failed with the following error:```\n{}\n```", y));
+        task_err(&task_name, &y.to_string())
+      }
+    }
+
+    match github_embed().await {
+      Ok(Some(embed)) => {
+        let redis = get_redis().await;
+        let rkey = "RSS_GitHub_MsgID";
+        let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
+
+        // Check if the message ID is in Redis
+        match redis.get(&rkey).await {
+          Ok(Some(msg_id_key)) => {
+            // Fetch the cached content
+            let cached_content: Option<String> = redis.get("RSS_GitHub_Content").await.unwrap_or(None);
+
+            if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+              // Attempt to edit the message
+              if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
+                let new_desc = message.embeds[0].description.clone().unwrap();
+
+                if cached_content.as_deref() != Some(&new_desc) {
+                  message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
+                }
+              }
+            } else {
+              // If the message is invalid ID, send a new message instead
+              let message = channel.send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await.unwrap();
+              redis.set(&rkey, &message.id.to_string()).await.unwrap();
+              redis.expire(&rkey, 36000).await.unwrap();
+            }
+          },
+          Ok(None) | Err(_) => {
+            // If the message is not found, send a new message instead
+            let message = channel.send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await.unwrap();
             redis.set(&rkey, &message.id.to_string()).await.unwrap();
             redis.expire(&rkey, 36000).await.unwrap();
           }
@@ -324,7 +506,7 @@ pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
       },
       Ok(None) => (),
       Err(y) => {
-        log_msgs.push(format!("**[RSS:GPortal:Error]:** Feed failed with the following error:```\n{}\n```", y));
+        log_msgs.push(format!("**[RSS:GitHub:Error]:** Feed failed with the following error:```\n{}\n```", y));
         task_err(&task_name, &y.to_string())
       }
     }
