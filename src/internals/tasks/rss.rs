@@ -121,6 +121,26 @@ fn trim_old_content(s: &str) -> String {
   }
 }
 
+enum IncidentColorMap {
+  Update,
+  Investigating,
+  Monitoring,
+  Resolved,
+  Default
+}
+
+impl IncidentColorMap {
+  fn color(&self) -> u32 {
+    match self {
+      Self::Update => 0xABDD9E, // Madang
+      Self::Investigating => 0xA5CCE0, // French Pass
+      Self::Monitoring => 0x81CBAD, // Monte Carlo
+      Self::Resolved => 0x57F287, // Emerald
+      Self::Default => 0x81CBAD // Monte Carlo
+    }
+  }
+}
+
 pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
   #[cfg(feature = "production")]
   let mut interval = interval(Duration::from_secs(300)); // Check feeds every 5 mins

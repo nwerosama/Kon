@@ -2,6 +2,7 @@ use crate::Error;
 use super::{
   super::task_err,
   REDIS_EXPIRY_SECS,
+  IncidentColorMap,
   get_redis,
   save_to_redis,
   fetch_feed,
@@ -47,18 +48,21 @@ pub async fn github_embed() -> Result<Option<CreateEmbed>, Error> {
 
   let color: u32;
   let update_patt = Regex::new(r"(?i)\bupdate\b").unwrap();
+  let investigating_patt = Regex::new(r"(?i)\binvestigating\b").unwrap();
   let resolved_patt = Regex::new(r"(?i)\bresolved\b").unwrap();
   let date_patt = Regex::new(r"\b[A-Z][a-z]{2} \d{2}, \d{2}:\d{2} UTC\b").unwrap();
 
-  let first_entry = date_patt.split(&new_content).next().unwrap_or(&new_content);
+  let first_entry = date_patt.split(&new_content).map(str::trim).find(|e| !e.is_empty()).unwrap_or(&new_content);
 
-  if update_patt.is_match(&first_entry) {
-    color = 0xFFAD33;
+  color = if update_patt.is_match(&first_entry) {
+    IncidentColorMap::Update.color()
+  } else if investigating_patt.is_match(&first_entry) {
+    IncidentColorMap::Investigating.color()
   } else if resolved_patt.is_match(&first_entry) {
-    color = 0x57F287;
+    IncidentColorMap::Resolved.color()
   } else {
-    color = 0x243C32;
-  }
+    IncidentColorMap::Default.color()
+  };
 
   if cached_incident.is_empty() {
     redis.set(&rkey, &get_incident_id(&article.links[0].href).unwrap()).await.unwrap();
