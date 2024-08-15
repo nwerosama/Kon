@@ -39,8 +39,8 @@ jobs:
           push: true
           tags: git.toast-server.net/toast/kon:main
           build-args: GIT_HASH=${{ env.GITHUB_SHA }}
-          cache-from: type=registry,ref=git.toast-server.net/toast/kon:main
-          cache-to: type=inline
+          cache-from: type=registry,ref=git.toast-server.net/toast/kon:_cache_
+          cache-to: type=registry,ref=git.toast-server.net/toast/kon:_cache_,mode=max
 
       - name: Deploy update
         uses: https://github.com/appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
