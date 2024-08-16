@@ -1023,7 +1023,7 @@ dependencies = [
 
 [[package]]
 name = "kon"
-version = "0.3.17"
+version = "0.3.18"
 dependencies = [
  "bb8",
  "bb8-postgres",

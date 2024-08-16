@@ -3,7 +3,7 @@ mod processor; // Process the feeds and send it off to Discord
 mod esxi;
 mod github;
 mod gportal;
-mod rust_msg;
+mod rust;
 
 use crate::{
   Error,

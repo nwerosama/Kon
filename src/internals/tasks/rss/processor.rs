@@ -1,4 +1,5 @@
 use super::{
+  task_info,
   task_err,
   TASK_NAME,
   BINARY_PROPERTIES,
@@ -6,7 +7,7 @@ use super::{
   esxi::esxi_embed,
   github::github_embed,
   gportal::gportal_embed,
-  rust_msg::rust_message
+  rust::rust_message
 };
 
 use regex::Regex;
@@ -57,26 +58,20 @@ pub async fn feed_processor(ctx: &Context) {
               }
 
               if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_desc) {
+                task_info(TASK_NAME, &format!("GPortal func, replying to message id: {}", msg_id));
                 message.reply(&ctx.http, "This incident has been marked as resolved!").await.unwrap();
                 redis.del(&rkey).await.unwrap();
               }
             }
-          } else {
-            // If the message is invalid ID, send a new message instead
-            let message = channel.send_message(&ctx.http, CreateMessage::new()
-              .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
-            ).await.unwrap();
-            redis.set(&rkey, &message.id.to_string()).await.unwrap();
-            redis.expire(&rkey, 36000).await.unwrap();
           }
         },
         Ok(None) | Err(_) => {
-            // If the message is not found, send a new message instead
-            let message = channel.send_message(&ctx.http, CreateMessage::new()
-              .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
-            ).await.unwrap();
-            redis.set(&rkey, &message.id.to_string()).await.unwrap();
-            redis.expire(&rkey, 36000).await.unwrap();
+          // If the message is invalid ID, send a new message instead
+          let message = channel.send_message(&ctx.http, CreateMessage::new()
+            .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
+          ).await.unwrap();
+          redis.set(&rkey, &message.id.to_string()).await.unwrap();
+          redis.expire(&rkey, 36000).await.unwrap();
         }
       }
     },
@@ -109,15 +104,11 @@ pub async fn feed_processor(ctx: &Context) {
               }
 
               if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_desc) {
+                task_info(TASK_NAME, &format!("GitHub func, replying to message id: {}", msg_id));
                 message.reply(&ctx.http, "This incident has been marked as resolved!").await.unwrap();
                 redis.del(&rkey).await.unwrap();
               }
             }
-          } else {
-            // If the message is invalid ID, send a new message instead
-            let message = channel.send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await.unwrap();
-            redis.set(&rkey, &message.id.to_string()).await.unwrap();
-            redis.expire(&rkey, 36000).await.unwrap();
           }
         },
         Ok(None) | Err(_) => {
