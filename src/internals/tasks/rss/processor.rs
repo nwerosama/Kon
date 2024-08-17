@@ -1,5 +1,4 @@
 use super::{
-  task_info,
   task_err,
   TASK_NAME,
   BINARY_PROPERTIES,
@@ -11,6 +10,10 @@ use super::{
 };
 
 use regex::Regex;
+use tokio::time::{
+  Duration,
+  sleep
+};
 use poise::serenity_prelude::{
   Context,
   ChannelId,
@@ -57,8 +60,9 @@ pub async fn feed_processor(ctx: &Context) {
                 message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
               }
 
+              sleep(Duration::from_secs(25)).await;
+
               if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_desc) {
-                task_info(TASK_NAME, &format!("GPortal func, replying to message id: {}", msg_id));
                 message.reply(&ctx.http, "This incident has been marked as resolved!").await.unwrap();
                 redis.del(&rkey).await.unwrap();
               }
@@ -103,8 +107,9 @@ pub async fn feed_processor(ctx: &Context) {
                 message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
               }
 
+              sleep(Duration::from_secs(25)).await;
+
               if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_desc) {
-                task_info(TASK_NAME, &format!("GitHub func, replying to message id: {}", msg_id));
                 message.reply(&ctx.http, "This incident has been marked as resolved!").await.unwrap();
                 redis.del(&rkey).await.unwrap();
               }
