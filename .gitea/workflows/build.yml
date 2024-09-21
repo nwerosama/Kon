@@ -56,7 +56,7 @@ jobs:
 
       - name: Install zigbuild
         run: |
-          pip3 install ziglang
+          pip3 install --break-system-packages ziglang
           cargo install --locked cargo-zigbuild
 
       - name: Compile
