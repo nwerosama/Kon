@@ -1,7 +1,9 @@
 .vscode
-target
+.cargo
 .env
 .gitignore
+.gitattributes
 docker-compose.yml
+Dockerfile
 renovate.json
 run.sh

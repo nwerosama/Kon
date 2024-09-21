@@ -18,12 +18,57 @@ use poise::serenity_prelude::{
   Context,
   ChannelId,
   EditMessage,
-  CreateMessage
+  CreateMessage,
+  CreateEmbed,
 };
 
   //  This is for building up the embed with the feed data
   /* std::fs::File::create("rss_name.log").unwrap();
   std::fs::write("rss_name.log", format!("{:#?}", feed))?; */
+
+// todo; have a reusable function for feeding RSS data and building the embed out of it.
+//       see github.rs / esxi.rs / gportal.rs for references of this idea.
+
+
+async fn process_embed(
+  ctx: &Context,
+  embed: Option<CreateEmbed>,
+  redis_key: &str,
+  content_key: &str
+) -> Result<(), crate::Error> {
+  if let Some(embed) = embed {
+    let redis = get_redis().await;
+    let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
+
+    let msg_id_key: Option<String> = redis.get(redis_key).await?;
+    let cached_content: Option<String> = redis.get(content_key).await.unwrap_or(None);
+
+    if let Some(msg_id_key) = msg_id_key {
+      if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+        if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
+          let new_description = message.embeds[0].description.clone().unwrap();
+
+          if cached_content.as_deref() != Some(&new_description) {
+            message.edit(&ctx.http, EditMessage::new().embed(embed)).await?;
+          }
+
+          sleep(Duration::from_secs(15)).await;
+
+          if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_description) {
+            message.reply(&ctx.http, "This incident has been marked as resolved!").await?;
+            redis.del(redis_key).await?;
+          }
+        }
+      }
+    } else {
+      let message = channel.send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await?;
+      redis.set(redis_key, &message.id.to_string()).await?;
+      redis.expire(redis_key, 36000).await?;
+    }
+  }
+
+  Ok(())
+}
 
 pub async fn feed_processor(ctx: &Context) {
   let mut log_msgs: Vec<String> = Vec::new();
@@ -40,45 +85,7 @@ pub async fn feed_processor(ctx: &Context) {
   }
 
   match gportal_embed().await {
-    Ok(Some(embed)) => {
-      let redis = get_redis().await;
-      let rkey = "RSS_GPortal_MsgID";
-      let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
-
-      // Check if the message ID is in Redis
-      match redis.get(&rkey).await {
-        Ok(Some(msg_id_key)) => {
-          // Fetch the cached content
-          let cached_content: Option<String> = redis.get("RSS_GPortal_Content").await.unwrap_or(None);
-
-          if let Ok(msg_id) = msg_id_key.parse::<u64>() {
-            // Attempt to edit the message
-            if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
-              let new_desc = message.embeds[0].description.clone().unwrap();
-
-              if cached_content.as_deref() != Some(&new_desc) {
-                message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
-              }
-
-              sleep(Duration::from_secs(25)).await;
-
-              if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_desc) {
-                message.reply(&ctx.http, "This incident has been marked as resolved!").await.unwrap();
-                redis.del(&rkey).await.unwrap();
-              }
-            }
-          }
-        },
-        Ok(None) | Err(_) => {
-          // If the message is invalid ID, send a new message instead
-          let message = channel.send_message(&ctx.http, CreateMessage::new()
-            .content("*Uh-oh! G-Portal is having issues!*").add_embed(embed)
-          ).await.unwrap();
-          redis.set(&rkey, &message.id.to_string()).await.unwrap();
-          redis.expire(&rkey, 36000).await.unwrap();
-        }
-      }
-    },
+    Ok(Some(embed)) => process_embed(&ctx, Some(embed), "RSS_GPortal_MsgID", "RSS_GPortal_Content").await.unwrap(),
     Ok(None) => (),
     Err(y) => {
       log_msgs.push(format!("**[{TASK_NAME}:GPortal:Error]:** Feed failed with the following error:```\n{}\n```", y));
@@ -87,43 +94,7 @@ pub async fn feed_processor(ctx: &Context) {
   }
 
   match github_embed().await {
-    Ok(Some(embed)) => {
-      let redis = get_redis().await;
-      let rkey = "RSS_GitHub_MsgID";
-      let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
-
-      // Check if the message ID is in Redis
-      match redis.get(&rkey).await {
-        Ok(Some(msg_id_key)) => {
-          // Fetch the cached content
-          let cached_content: Option<String> = redis.get("RSS_GitHub_Content").await.unwrap_or(None);
-
-          if let Ok(msg_id) = msg_id_key.parse::<u64>() {
-            // Attempt to edit the message
-            if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
-              let new_desc = message.embeds[0].description.clone().unwrap();
-
-              if cached_content.as_deref() != Some(&new_desc) {
-                message.edit(&ctx.http, EditMessage::new().embed(embed)).await.unwrap();
-              }
-
-              sleep(Duration::from_secs(25)).await;
-
-              if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_desc) {
-                message.reply(&ctx.http, "This incident has been marked as resolved!").await.unwrap();
-                redis.del(&rkey).await.unwrap();
-              }
-            }
-          }
-        },
-        Ok(None) | Err(_) => {
-          // If the message is not found, send a new message instead
-          let message = channel.send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await.unwrap();
-          redis.set(&rkey, &message.id.to_string()).await.unwrap();
-          redis.expire(&rkey, 36000).await.unwrap();
-        }
-      }
-    },
+    Ok(Some(embed)) => process_embed(&ctx, Some(embed), "RSS_GitHub_MsgID", "RSS_GitHub_Content").await.unwrap(),
     Ok(None) => (),
     Err(y) => {
       log_msgs.push(format!("**[{TASK_NAME}:GitHub:Error]:** Feed failed with the following error:```\n{}\n```", y));

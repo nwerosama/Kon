@@ -20,10 +20,6 @@ pub async fn token_path() -> TokenServiceApi {
   TSCLIENT.lock().await.get().await.unwrap()
 }
 
-pub fn concat_message(messages: Vec<String>) -> String {
-  messages.join("\n")
-}
-
 pub fn mention_dev(ctx: poise::Context<'_, (), crate::Error>) -> Option<String> {
   let devs = super::config::BINARY_PROPERTIES.developers.clone();
   let app_owners = ctx.framework().options().owners.clone();
