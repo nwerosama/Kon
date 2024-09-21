@@ -35,6 +35,7 @@ jobs:
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         id: cache
         with:
+          save-always: true
           path: |
             $HOME/.cargo/bin/
             $HOME/.cargo/git/
@@ -80,7 +81,7 @@ jobs:
 
 
   deploy:
-    runs-on: alpine-latest
+    runs-on: host
     needs: build
     steps:
       - name: Deploy update
