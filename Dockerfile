@@ -2,7 +2,7 @@ FROM scratch AS base
 WORKDIR /builder
 COPY . .
 
-FROM alpine:edge
+FROM alpine:3.20
 LABEL org.opencontainers.image.source="https://git.toast-server.net/toast/Kon"
 RUN apk add --no-cache libgcc fluidsynth
 WORKDIR /kon
