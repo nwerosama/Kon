@@ -1,4 +1,4 @@
-FROM scratch as base
+FROM scratch AS base
 WORKDIR /builder
 COPY . .
 

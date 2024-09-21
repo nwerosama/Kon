@@ -12,6 +12,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      RUNNER_TOOL_CACHE: /toolcache
 
     steps:
       - name: Set up Docker environment
