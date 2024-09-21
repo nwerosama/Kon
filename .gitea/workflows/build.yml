@@ -16,7 +16,20 @@ jobs:
     steps:
       - name: Set up Docker environment
         run: |
-          apt update && apt upgrade -y && apt install -y apt-transport-https ca-certificates curl zstd gnupg lsb-release python3-pip libssl-dev
+          apt update && apt upgrade -y
+          DEPS=(
+            apt-transport-https
+            ca-certificates
+            curl
+            gnupg
+            lsb-release
+            python3-pip
+            libssl-dev
+            pkg-config
+          )
+          for dep in "${DEPS[@]}"; do
+            apt install -y "$dep"
+          done
           curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
           echo \
             "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
@@ -33,6 +46,7 @@ jobs:
         uses: https://github.com/actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         id: cache
         with:
+          save-always: true
           path: |
             $HOME/.cargo/bin/
             $HOME/.cargo/git/
