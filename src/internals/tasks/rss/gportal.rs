@@ -36,17 +36,12 @@ pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
   fn get_incident_id(input: &str) -> Option<String> {
     let re = Regex::new(r#"/incidents/([a-zA-Z0-9]+)$"#).unwrap();
 
-    if let Some(caps) = re.captures(input) {
-      Some(caps[1].to_string())
-    } else {
-      None
-    }
+    re.captures(input).map(|caps| caps[1].to_string())
   }
 
-  let cached_incident = redis.get(&rkey).await.unwrap().unwrap_or_default();
+  let cached_incident = redis.get(rkey).await.unwrap().unwrap_or_default();
   let new_content = format_html_to_discord(article.content.unwrap().body.unwrap());
 
-  let color: u32;
   let update_patt = Regex::new(r"(?i)\bupdate\b").unwrap();
   let investigating_patt = Regex::new(r"(?i)\binvestigating\b").unwrap();
   let monitoring_patt = Regex::new(r"(?i)\bmonitoring\b").unwrap();
@@ -55,22 +50,22 @@ pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
 
   let first_entry = date_patt.split(&new_content).map(str::trim).find(|e| !e.is_empty()).unwrap_or(&new_content);
 
-  color = if update_patt.is_match(&first_entry) {
+  let color: u32 = if update_patt.is_match(first_entry) {
     IncidentColorMap::Update.color()
-  } else if investigating_patt.is_match(&first_entry) {
+  } else if investigating_patt.is_match(first_entry) {
     IncidentColorMap::Investigating.color()
-  } else if monitoring_patt.is_match(&first_entry) {
+  } else if monitoring_patt.is_match(first_entry) {
     IncidentColorMap::Monitoring.color()
-  } else if resolved_patt.is_match(&first_entry) {
+  } else if resolved_patt.is_match(first_entry) {
     IncidentColorMap::Resolved.color()
   } else {
     IncidentColorMap::Default.color()
   };
 
   if cached_incident.is_empty() {
-    redis.set(&rkey, &get_incident_id(&article.links[0].href).unwrap()).await.unwrap();
+    redis.set(rkey, &get_incident_id(&article.links[0].href).unwrap()).await.unwrap();
     redis.set(&rkey_content, &new_content).await.unwrap();
-    if let Err(y) = redis.expire(&rkey, REDIS_EXPIRY_SECS).await {
+    if let Err(y) = redis.expire(rkey, REDIS_EXPIRY_SECS).await {
       task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
     }
     return Ok(None);
@@ -80,28 +75,28 @@ pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
     if incident == cached_incident {
       let cached_content: String = redis.get(&rkey_content).await.unwrap().unwrap_or_default();
       if cached_content == new_content {
-        return Ok(None);
+        Ok(None)
       } else {
         redis.set(&rkey_content, &new_content).await.unwrap();
         redis.expire(&rkey_content, 21600).await.unwrap();
-        return Ok(Some(embed(
+        Ok(Some(embed(
           color,
           article.title.unwrap().content,
           incident_page,
           trim_old_content(&new_content),
           Timestamp::from(article.updated.unwrap())
-        )));
+        )))
       }
     } else {
-      save_to_redis(&rkey, &incident).await?;
+      save_to_redis(rkey, &incident).await?;
       redis.set(&rkey_content, &new_content).await.unwrap();
-      return Ok(Some(embed(
+      Ok(Some(embed(
         color,
         article.title.unwrap().content,
         incident_page,
         trim_old_content(&new_content),
         Timestamp::from(article.updated.unwrap())
-      )));
+      )))
     }
   } else {
     task_err("RSS:GPortal", &format!("Incident ID does not match the expected RegEx pattern! ({})", &article.links[0].href));

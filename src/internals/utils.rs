@@ -5,7 +5,7 @@ use tokenservice_client::TokenServiceApi;
 use super::tsclient::TSClient;
 
 pub static BOT_VERSION: LazyLock<String> = LazyLock::new(|| {
-  let cargo_version = cargo_toml::Manifest::from_str(&include_str!("../../Cargo.toml"))
+  let cargo_version = cargo_toml::Manifest::from_str(include_str!("../../Cargo.toml"))
     .unwrap()
     .package
     .unwrap()

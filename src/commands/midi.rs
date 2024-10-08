@@ -53,13 +53,13 @@ pub async fn midi_to_wav(
   let midi_path = &message.attachments[0].filename;
   write(midi_path, bytes)?;
 
-  let wav_path = re.replace(&midi_path, ".wav");
+  let wav_path = re.replace(midi_path, ".wav");
 
   let sf2_path = "/tmp/FluidR3_GM.sf2";
   write(sf2_path, include_bytes!("../internals/assets/FluidR3_GM.sf2"))?;
 
   let output = std::process::Command::new("fluidsynth")
-    .args(&["-ni", sf2_path, midi_path, "-F", &wav_path])
+    .args(["-ni", sf2_path, midi_path, "-F", &wav_path])
     .output();
 
   // Just to add an info to console to tell what the bot is doing when MIDI file is downloaded.

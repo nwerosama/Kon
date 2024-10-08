@@ -29,11 +29,11 @@ pub async fn rust_message() -> Result<Option<String>, Error> {
     re.captures(input.as_str()).and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
   }
 
-  let cached_blog = redis.get(&rkey).await.unwrap().unwrap_or_default();
+  let cached_blog = redis.get(rkey).await.unwrap().unwrap_or_default();
 
   if cached_blog.is_empty() {
-    redis.set(&rkey, get_blog_title(article.id).unwrap().as_str()).await.unwrap();
-    if let Err(y) = redis.expire(&rkey, REDIS_EXPIRY_SECS).await {
+    redis.set(rkey, get_blog_title(article.id).unwrap().as_str()).await.unwrap();
+    if let Err(y) = redis.expire(rkey, REDIS_EXPIRY_SECS).await {
       task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
     }
     return Ok(None);
@@ -41,9 +41,9 @@ pub async fn rust_message() -> Result<Option<String>, Error> {
 
   if let Some(blog) = get_blog_title(article.id) {
     if blog == cached_blog {
-      return Ok(None);
+      Ok(None)
     } else {
-      save_to_redis(&rkey, &blog).await?;
+      save_to_redis(rkey, &blog).await?;
       Ok(Some(format!("Rust Team has put out a new article!\n**[{}](<{}>)**", article.links[0].title.clone().unwrap(), article.links[0].href)))
     }
   } else {

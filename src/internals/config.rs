@@ -9,7 +9,7 @@ pub struct ConfigMeta {
 }
 
 #[cfg(feature = "production")]
-pub static BINARY_PROPERTIES: LazyLock<ConfigMeta> = LazyLock::new(|| ConfigMeta::new());
+pub static BINARY_PROPERTIES: LazyLock<ConfigMeta> = LazyLock::new(ConfigMeta::new);
 
 #[cfg(not(feature = "production"))]
 pub static BINARY_PROPERTIES: LazyLock<ConfigMeta> = LazyLock::new(||

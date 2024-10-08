@@ -147,7 +147,7 @@ pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
   #[cfg(not(feature = "production"))]
   let mut interval = interval(Duration::from_secs(30)); // Check feeds every 30 secs
   let mut first_run = true;
-  task_info(&TASK_NAME, "Task loaded!");
+  task_info(TASK_NAME, "Task loaded!");
 
   loop {
     interval.tick().await;

@@ -42,11 +42,11 @@ pub async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
     }
   }
 
-  let cached_patch = redis.get(&rkey).await.unwrap().unwrap_or_default();
+  let cached_patch = redis.get(rkey).await.unwrap().unwrap_or_default();
 
   if cached_patch.is_empty() {
-    redis.set(&rkey, &article.categories[3].term).await.unwrap();
-    if let Err(y) = redis.expire(&rkey, REDIS_EXPIRY_SECS).await {
+    redis.set(rkey, &article.categories[3].term).await.unwrap();
+    if let Err(y) = redis.expire(rkey, REDIS_EXPIRY_SECS).await {
       task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
     }
     return Ok(None);
@@ -54,9 +54,9 @@ pub async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
 
   if let Some(patch) = get_patch_version(&article.categories[3].term) {
     if patch == cached_patch {
-      return Ok(None);
+      Ok(None)
     } else {
-      save_to_redis(&rkey, &article.categories[3].term).await?;
+      save_to_redis(rkey, &article.categories[3].term).await?;
       Ok(Some(CreateEmbed::new()
         .color(0x4EFBCB)
         .author(CreateEmbedAuthor::new(feed.title.unwrap().content).url(home_page))

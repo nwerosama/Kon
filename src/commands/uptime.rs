@@ -29,19 +29,17 @@ fn get_os_info() -> String {
   let mut name = "BoringOS".to_string();
   let mut version = "v0.0".to_string();
 
-  if let Ok(file) = File::open(&path) {
+  if let Ok(file) = File::open(path) {
     let reader = BufReader::new(file);
-    for line in reader.lines() {
-      if let Ok(line) = line {
-        if line.starts_with("NAME=") {
-          name = line.split('=').nth(1).unwrap_or_default().trim_matches('"').to_string();
-        } else if line.starts_with("VERSION=") {
-          version = line.split('=').nth(1).unwrap_or_default().trim_matches('"').to_string();
-        } else if line.starts_with("VERSION_ID=") {
-          version = line.split('=').nth(1).unwrap_or_default().trim_matches('"').to_string();
-        }
+    let set_value = |s: String| s.split('=').nth(1).unwrap_or_default().trim_matches('"').to_string();
+    reader.lines().map_while(Result::ok).for_each(|line| {
+      match line {
+        l if l.starts_with("NAME=") => name = set_value(l),
+        l if l.starts_with("VERSION=") => version = set_value(l),
+        l if l.starts_with("VERSION_ID=") => version = set_value(l),
+        _ => {}
       }
-    }
+    });
   }
 
   format!("{} {}", name, version)
@@ -69,11 +67,11 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
     proc_uptime = now.duration_since(time_started).unwrap().as_secs();
   }
 
-  let stat_msg = vec![
+  let stat_msg = [
     format!("**{} {}** `{}:{}`", _bot.name, BOT_VERSION.as_str(), GIT_COMMIT_HASH, GIT_COMMIT_BRANCH),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
     format!("Process: `{}`", format_duration(proc_uptime)),
-    format!("CPU: `{}`", format!("{}", cpu[0].brand())),
+    format!("CPU: `{}`", cpu[0].brand()),
     format!("OS: `{}`", get_os_info())
   ];
   ctx.reply(stat_msg.join("\n")).await?;

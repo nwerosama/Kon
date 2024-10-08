@@ -80,25 +80,25 @@ pub async fn feed_processor(ctx: &Context) {
     Ok(None) => (),
     Err(y) => {
       log_msgs.push(format!("**[{TASK_NAME}:ESXi:Error]:** Feed failed with the following error:```\n{}\n```", y));
-      task_err(&TASK_NAME, &y.to_string())
+      task_err(TASK_NAME, &y.to_string())
     }
   }
 
   match gportal_embed().await {
-    Ok(Some(embed)) => process_embed(&ctx, Some(embed), "RSS_GPortal_MsgID", "RSS_GPortal_Content").await.unwrap(),
+    Ok(Some(embed)) => process_embed(ctx, Some(embed), "RSS_GPortal_MsgID", "RSS_GPortal_Content").await.unwrap(),
     Ok(None) => (),
     Err(y) => {
       log_msgs.push(format!("**[{TASK_NAME}:GPortal:Error]:** Feed failed with the following error:```\n{}\n```", y));
-      task_err(&TASK_NAME, &y.to_string())
+      task_err(TASK_NAME, &y.to_string())
     }
   }
 
   match github_embed().await {
-    Ok(Some(embed)) => process_embed(&ctx, Some(embed), "RSS_GitHub_MsgID", "RSS_GitHub_Content").await.unwrap(),
+    Ok(Some(embed)) => process_embed(ctx, Some(embed), "RSS_GitHub_MsgID", "RSS_GitHub_Content").await.unwrap(),
     Ok(None) => (),
     Err(y) => {
       log_msgs.push(format!("**[{TASK_NAME}:GitHub:Error]:** Feed failed with the following error:```\n{}\n```", y));
-      task_err(&TASK_NAME, &y.to_string())
+      task_err(TASK_NAME, &y.to_string())
     }
   }
 
@@ -109,7 +109,7 @@ pub async fn feed_processor(ctx: &Context) {
     Ok(None) => (),
     Err(y) => {
       log_msgs.push(format!("**[{TASK_NAME}:RustBlog:Error]:** Feed failed with the following error:```\n{}\n```", y));
-      task_err(&TASK_NAME, &y.to_string())
+      task_err(TASK_NAME, &y.to_string())
     }
   }
 

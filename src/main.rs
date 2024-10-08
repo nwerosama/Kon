@@ -57,7 +57,7 @@ async fn on_ready(
     println!("Event[Ready][Notice]: Session limit: {}/{}", session.remaining, session.total);
   }
 
-  println!("Event[Ready]: Build version: {} ({}:{})", BOT_VERSION.to_string(), GIT_COMMIT_HASH, GIT_COMMIT_BRANCH);
+  println!("Event[Ready]: Build version: {} ({}:{})", *BOT_VERSION, GIT_COMMIT_HASH, GIT_COMMIT_BRANCH);
   println!("Event[Ready]: Connected to API as {}", ready.user.name);
 
   let message = CreateMessage::new();
@@ -76,16 +76,13 @@ async fn event_processor(
   event: &FullEvent,
   _framework: poise::FrameworkContext<'_, (), Error>
 ) -> Result<(), Error> {
-  match event {
-    FullEvent::Ready { .. } => {
-      let thread_id = format!("{:?}", current().id());
-      let thread_num: String = thread_id.chars().filter(|c| c.is_digit(10)).collect();
-      println!("Event[Ready]: Task Scheduler operating on thread {}", thread_num);
+  if let FullEvent::Ready { .. } = event {
+    let thread_id = format!("{:?}", current().id());
+    let thread_num: String = thread_id.chars().filter(|c| c.is_ascii_digit()).collect();
+    println!("Event[Ready]: Task Scheduler operating on thread {}", thread_num);
 
-      let ctx = Arc::new(ctx.clone());
-      run_task(ctx.clone(), rss).await;
-    }
-    _ => {}
+    let ctx = Arc::new(ctx.clone());
+    run_task(ctx.clone(), rss).await;
   }
 
   Ok(())

@@ -11,7 +11,7 @@ fn main() {
 
   {
     let git_branch = std::process::Command::new("git")
-      .args(&["rev-parse", "--abbrev-ref", "HEAD"])
+      .args(["rev-parse", "--abbrev-ref", "HEAD"])
       .output()
       .expect("Command execution failed");
 

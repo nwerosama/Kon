@@ -54,7 +54,7 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
         _ => "Unknown"
       };
       let name = id_name_map.get(id).unwrap_or(&name);
-      server_map.entry(title.clone()).or_insert_with(Vec::new).push((name.to_owned().to_string(), status.to_owned()));
+      server_map.entry(title.clone()).or_default().push((name.to_owned().to_string(), status.to_owned()));
     }
   }
 
