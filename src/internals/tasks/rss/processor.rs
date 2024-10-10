@@ -55,7 +55,6 @@ async fn process_embed(
           sleep(Duration::from_secs(15)).await;
 
           if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_description) {
-            message.reply(&ctx.http, "This incident has been marked as resolved!").await?;
             redis.del(redis_key).await?;
           }
         }
