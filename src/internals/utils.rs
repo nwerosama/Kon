@@ -11,7 +11,7 @@ pub static BOT_VERSION: LazyLock<String> = LazyLock::new(|| {
     .unwrap()
     .version
     .unwrap();
-  format!("v{}", cargo_version)
+  format!("v{cargo_version}")
 });
 
 static TSCLIENT: LazyLock<Mutex<TSClient>> = LazyLock::new(|| Mutex::new(TSClient::new()));
@@ -28,7 +28,7 @@ pub fn mention_dev(ctx: poise::Context<'_, (), crate::Error>) -> Option<String> 
 
   for dev in devs {
     if app_owners.contains(&UserId::new(dev)) {
-      mentions.push(format!("<@{}>", dev));
+      mentions.push(format!("<@{dev}>"));
     }
   }
 
@@ -47,15 +47,15 @@ pub fn format_duration(secs: u64) -> String {
 
   let mut formatted_string = String::new();
   if days > 0 {
-    formatted_string.push_str(&format!("{}d, ", days));
+    formatted_string.push_str(&format!("{days}d, "));
   }
   if hours > 0 || days > 0 {
-    formatted_string.push_str(&format!("{}h, ", hours));
+    formatted_string.push_str(&format!("{hours}h, "));
   }
   if minutes > 0 || hours > 0 {
-    formatted_string.push_str(&format!("{}m, ", minutes));
+    formatted_string.push_str(&format!("{minutes}m, "));
   }
-  formatted_string.push_str(&format!("{}s", seconds));
+  formatted_string.push_str(&format!("{seconds}s"));
 
   formatted_string
 }
@@ -75,8 +75,8 @@ pub fn format_bytes(bytes: u64) -> String {
   }
 
   if unit == "B" {
-    format!("{}{}", value, unit)
+    format!("{value}{unit}")
   } else {
-    format!("{:.2}{}", value, unit)
+    format!("{value:.2}{unit}")
   }
 }

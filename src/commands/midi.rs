@@ -21,9 +21,13 @@ use poise::{
 };
 
 /// Convert MIDI file to WAV
-#[poise::command(context_menu_command = "MIDI -> WAV")]
+#[poise::command(
+  context_menu_command = "MIDI -> WAV",
+  install_context = "User",
+  interaction_context = "Guild|BotDm|PrivateChannel",
+)]
 pub async fn midi_to_wav(
-  ctx: poise::Context<'_, (), Error>,
+  ctx: super::PoiseCtx<'_>,
   #[description = "MIDI file to be converted"] message: poise::serenity_prelude::Message
 ) -> Result<(), Error> {
   let re = Regex::new(r"(?i)\.mid$").unwrap();
@@ -46,7 +50,7 @@ pub async fn midi_to_wav(
       )
       .await.unwrap();
 
-      return Err(Error::from(format!("Failed to download the file: {}", y)))
+      return Err(Error::from(format!("Failed to download the file: {y}")))
     }
   };
 
@@ -63,7 +67,7 @@ pub async fn midi_to_wav(
     .output();
 
   // Just to add an info to console to tell what the bot is doing when MIDI file is downloaded.
-  println!("Discord[{}:{}]: Processing MIDI file: \"{}\"", ctx.guild().unwrap().name, ctx.command().qualified_name, midi_path);
+  println!("Discord[{}]: Processing MIDI file: \"{}\"", ctx.command().qualified_name, midi_path);
 
   match output {
     Ok(_) => {
@@ -73,8 +77,8 @@ pub async fn midi_to_wav(
 
       if reply.is_err() {
         println!(
-          "Discord[{}:{}]: Processed file couldn't be uploaded back to Discord channel due to upload limit",
-          ctx.guild().unwrap().name, ctx.command().qualified_name
+          "Discord[{}]: Processed file couldn't be uploaded back to Discord channel due to upload limit",
+          ctx.command().qualified_name
         );
 
         ctx.send(CreateReply::default()
@@ -93,7 +97,7 @@ pub async fn midi_to_wav(
         .content("Command didn't execute successfully, check console for more information!")
       ).await.unwrap();
 
-      return Err(Error::from(format!("Midi conversion failed: {}", y)))
+      return Err(Error::from(format!("Midi conversion failed: {y}")))
     }
   }
 

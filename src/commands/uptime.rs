@@ -42,12 +42,12 @@ fn get_os_info() -> String {
     });
   }
 
-  format!("{} {}", name, version)
+  format!("{name} {version}")
 }
 
 /// Retrieve host and bot uptimes
 #[poise::command(slash_command)]
-pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+pub async fn uptime(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   let _bot = ctx.http().get_current_user().await.unwrap();
   let mut sys = System::new_all();
   sys.refresh_all();
@@ -68,7 +68,7 @@ pub async fn uptime(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
   }
 
   let stat_msg = [
-    format!("**{} {}** `{}:{}`", _bot.name, BOT_VERSION.as_str(), GIT_COMMIT_HASH, GIT_COMMIT_BRANCH),
+    format!("**{} {}** `{GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH}`", _bot.name, BOT_VERSION.as_str()),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
     format!("Process: `{}`", format_duration(proc_uptime)),
     format!("CPU: `{}`", cpu[0].brand()),

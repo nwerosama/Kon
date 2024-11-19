@@ -8,7 +8,7 @@ services:
       - cache
   cache:
     container_name: kon-redis
-    image: redis/redis-stack-server:7.4.0-v0
+    image: redis/redis-stack-server:7.4.0-v1
     restart: unless-stopped
     ports:
       - 37935:6379/tcp

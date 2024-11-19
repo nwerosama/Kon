@@ -16,11 +16,11 @@ use std::{
 };
 
 fn task_info(name: &str, message: &str) {
-  println!("TaskScheduler[{}]: {}", name, message)
+  println!("TaskScheduler[{name}]: {message}")
 }
 
 fn task_err(name: &str, message: &str) {
-  eprintln!("TaskScheduler[{}:Error]: {}", name, message)
+  eprintln!("TaskScheduler[{name}:Error]: {message}")
 }
 
 static TASK_RUNNING: AtomicBool = AtomicBool::new(false);
@@ -36,9 +36,9 @@ where
     TASK_RUNNING.store(true, Ordering::SeqCst);
     spawn(async move {
       if let Err(y) = task(ctx_cl).await {
-        eprintln!("TaskScheduler[Main:Error]: Failed to execute the task, error reason: {}", y);
+        eprintln!("TaskScheduler[Main:Error]: Failed to execute the task, error reason: {y}");
         if let Some(source) = y.source() {
-          eprintln!("TaskScheduler[Main:Error]: Failed to execute the task, this is caused by: {:#?}", source);
+          eprintln!("TaskScheduler[Main:Error]: Failed to execute the task, this is caused by: {source:#?}");
         }
       }
       TASK_RUNNING.store(false, Ordering::SeqCst);

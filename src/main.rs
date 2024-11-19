@@ -19,6 +19,7 @@ use crate::internals::{
 
 use std::{
   sync::Arc,
+  borrow::Cow,
   thread::current
 };
 use poise::serenity_prelude::{
@@ -57,7 +58,7 @@ async fn on_ready(
     println!("Event[Ready][Notice]: Session limit: {}/{}", session.remaining, session.total);
   }
 
-  println!("Event[Ready]: Build version: {} ({}:{})", *BOT_VERSION, GIT_COMMIT_HASH, GIT_COMMIT_BRANCH);
+  println!("Event[Ready]: Build version: {} ({GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH})", *BOT_VERSION);
   println!("Event[Ready]: Connected to API as {}", ready.user.name);
 
   let message = CreateMessage::new();
@@ -72,16 +73,15 @@ async fn on_ready(
 }
 
 async fn event_processor(
-  ctx: &Context,
-  event: &FullEvent,
-  _framework: poise::FrameworkContext<'_, (), Error>
+  framework: poise::FrameworkContext<'_, (), Error>,
+  event: &FullEvent
 ) -> Result<(), Error> {
   if let FullEvent::Ready { .. } = event {
     let thread_id = format!("{:?}", current().id());
     let thread_num: String = thread_id.chars().filter(|c| c.is_ascii_digit()).collect();
-    println!("Event[Ready]: Task Scheduler operating on thread {}", thread_num);
+    println!("Event[Ready]: Task Scheduler operating on thread {thread_num}");
 
-    let ctx = Arc::new(ctx.clone());
+    let ctx = Arc::new(framework.serenity_context.clone());
     run_task(ctx.clone(), rss).await;
   }
 
@@ -90,6 +90,12 @@ async fn event_processor(
 
 #[tokio::main]
 async fn main() {
+  let prefix = if BINARY_PROPERTIES.env.contains("dev") {
+    Some(Cow::Borrowed("kon!"))
+  } else {
+    Some(Cow::Borrowed("k!"))
+  };
+
   let framework = poise::Framework::builder()
     .options(poise::FrameworkOptions {
       commands: vec![
@@ -101,7 +107,7 @@ async fn main() {
         commands::uptime::uptime()
       ],
       prefix_options: poise::PrefixFrameworkOptions {
-        prefix: Some(String::from("konata")),
+        prefix,
         mention_as_prefix: false,
         case_insensitive_commands: true,
         ignore_bots: true,
@@ -113,29 +119,32 @@ async fn main() {
           Some(guild) => guild.name.clone(),
           None => String::from("Direct Message")
         };
-        println!("Discord[{}]: {} ran /{}", get_guild_name, ctx.author().name, ctx.command().qualified_name);
+        println!(
+          "Discord[{get_guild_name}]: {} ran /{}",
+          ctx.author().name,
+          ctx.command().qualified_name
+        );
       }),
       on_error: |error| Box::pin(async move {
         match error {
           poise::FrameworkError::Command { error, ctx, .. } => {
-            println!("PoiseCommandError({}): {}", ctx.command().qualified_name, error);
+            println!("PoiseCommandError({}): {error}", ctx.command().qualified_name);
             ctx.reply(format!(
               "Encountered an error during command execution, ask {} to check console for more details!",
               mention_dev(ctx).unwrap_or_default()
             )).await.expect("Error sending message");
           },
-          poise::FrameworkError::EventHandler { error, event, .. } => println!("PoiseEventHandlerError({}): {}", event.snake_case_name(), error),
-          poise::FrameworkError::Setup { error, .. } => println!("PoiseSetupError: {}", error),
+          poise::FrameworkError::EventHandler { error, event, .. } => println!("PoiseEventHandlerError({}): {error}", event.snake_case_name()),
           poise::FrameworkError::UnknownInteraction { interaction, .. } => println!(
             "PoiseUnknownInteractionError: {} tried to execute an unknown interaction ({})",
             interaction.user.name,
             interaction.data.name
           ),
-          other => println!("PoiseOtherError: {}", other)
+          other => println!("PoiseOtherError: {other}")
         }
       }),
       initialize_owners: true,
-      event_handler: |ctx, event, framework, _| Box::pin(event_processor(ctx, event, framework)),
+      event_handler: |framework, event| Box::pin(event_processor(framework, event)),
       ..Default::default()
     })
     .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
@@ -151,6 +160,6 @@ async fn main() {
   .await.expect("Error creating client");
 
   if let Err(why) = client.start().await {
-    println!("Error starting client: {:#?}", why);
+    println!("Error starting client: {why:#?}");
   }
 }

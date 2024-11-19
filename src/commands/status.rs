@@ -71,13 +71,13 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
   slash_command,
   subcommands("wg")
 )]
-pub async fn status(_: poise::Context<'_, (), Error>) -> Result<(), Error> {
+pub async fn status(_: super::PoiseCtx<'_>) -> Result<(), Error> {
   Ok(())
 }
 
 /// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
-pub async fn wg(ctx: poise::Context<'_, (), Error>) -> Result<(), Error> {
+pub async fn wg(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   let pms_asia = token_path().await.wg_pms;
   let pms_eu = pms_asia.replace("asia", "eu");
   let embed = CreateEmbed::new().color(BINARY_PROPERTIES.embed_color);

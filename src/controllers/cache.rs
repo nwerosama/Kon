@@ -27,6 +27,7 @@ impl RedisController {
 
   async fn create_pool(manager: RedisConnectionManager) -> Pool<RedisConnectionManager> {
     let mut backoff = 1;
+    let redis_err = "Redis[Error]: {{ e }}, retrying in {{ backoff }} seconds";
 
     loop {
       match Pool::builder().max_size(20).retry_connection(true).build(manager.clone()).await {
@@ -40,19 +41,19 @@ impl RedisController {
                   return pool.clone();
                 },
                 Err(e) => {
-                  eprintln!("Redis[Error]: {}, retrying in {} seconds", e, backoff);
+                  eprintln!("{}", redis_err.replace("{{ e }}", &e.to_string()).replace("{{ backoff }}", &backoff.to_string()));
                   Self::apply_backoff(&mut backoff).await;
                 }
               }
             },
             Err(e) => {
-              eprintln!("Redis[ConnError]: {}, retrying in {} seconds", e, backoff);
+              eprintln!("{}", redis_err.replace("{{ e }}", &e.to_string()).replace("{{ backoff }}", &backoff.to_string()));
               Self::apply_backoff(&mut backoff).await;
             }
           }
         }
         Err(e) => {
-          eprintln!("Redis[PoolError]: {}, retrying in {} seconds", e, backoff);
+          eprintln!("Redis[PoolError]: {e}, retrying in {backoff} seconds");
           Self::apply_backoff(&mut backoff).await;
         }
       }

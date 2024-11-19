@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 
 pub struct ConfigMeta {
+  pub env: String,
   pub embed_color: i32,
   pub ready_notify: u64,
   pub rss_channel: u64,
@@ -14,6 +15,7 @@ pub static BINARY_PROPERTIES: LazyLock<ConfigMeta> = LazyLock::new(ConfigMeta::n
 #[cfg(not(feature = "production"))]
 pub static BINARY_PROPERTIES: LazyLock<ConfigMeta> = LazyLock::new(||
   ConfigMeta::new()
+    .env("dev")
     .embed_color(0xf1d63c)
     .ready_notify(865673694184996888)
     .rss_channel(865673694184996888)
@@ -22,6 +24,7 @@ pub static BINARY_PROPERTIES: LazyLock<ConfigMeta> = LazyLock::new(||
 impl ConfigMeta {
   fn new() -> Self {
     Self {
+      env: "prod".to_string(),
       embed_color: 0x5a99c7,
       ready_notify: 865673694184996888,
       rss_channel: 865673694184996888,
@@ -33,6 +36,12 @@ impl ConfigMeta {
   }
 
   // Scalable functions below;
+  #[cfg(not(feature = "production"))]
+  fn env(mut self, env: &str) -> Self {
+    self.env = env.to_string();
+    self
+  }
+
   #[cfg(not(feature = "production"))]
   fn embed_color(mut self, color: i32) -> Self {
     self.embed_color = color;
