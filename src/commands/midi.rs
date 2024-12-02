@@ -1,30 +1,32 @@
 use crate::{
   Error,
   internals::utils::{
-    mention_dev,
-    format_bytes
+    format_bytes,
+    mention_dev
   }
 };
 
-use regex::Regex;
-use std::{
-  os::unix::fs::MetadataExt,
-  fs::{
-    write,
-    remove_file,
-    metadata
+use {
+  poise::{
+    CreateReply,
+    serenity_prelude::CreateAttachment
+  },
+  regex::Regex,
+  std::{
+    fs::{
+      metadata,
+      remove_file,
+      write
+    },
+    os::unix::fs::MetadataExt
   }
-};
-use poise::{
-  CreateReply,
-  serenity_prelude::CreateAttachment
 };
 
 /// Convert MIDI file to WAV
 #[poise::command(
   context_menu_command = "MIDI -> WAV",
   install_context = "User",
-  interaction_context = "Guild|BotDm|PrivateChannel",
+  interaction_context = "Guild|BotDm|PrivateChannel"
 )]
 pub async fn midi_to_wav(
   ctx: super::PoiseCtx<'_>,
@@ -42,13 +44,13 @@ pub async fn midi_to_wav(
   let bytes = match message.attachments[0].download().await {
     Ok(bytes) => bytes,
     Err(y) => {
-      ctx.send(CreateReply::default()
-        .content(format!(
+      ctx
+        .send(CreateReply::default().content(format!(
           "Download failed, ask {} to check console for more information!",
           mention_dev(ctx).unwrap_or_default()
-        ))
-      )
-      .await.unwrap();
+        )))
+        .await
+        .unwrap();
 
       return Err(Error::from(format!("Failed to download the file: {y}")))
     }
@@ -71,9 +73,9 @@ pub async fn midi_to_wav(
 
   match output {
     Ok(_) => {
-      let reply = ctx.send(CreateReply::default()
-        .attachment(CreateAttachment::path(&*wav_path).await.unwrap())
-      ).await;
+      let reply = ctx
+        .send(CreateReply::default().attachment(CreateAttachment::path(&*wav_path).await.unwrap()))
+        .await;
 
       if reply.is_err() {
         println!(
@@ -81,21 +83,24 @@ pub async fn midi_to_wav(
           ctx.command().qualified_name
         );
 
-        ctx.send(CreateReply::default()
-          .content(format!(
+        ctx
+          .send(CreateReply::default().content(format!(
             "Couldn't upload the processed file (`{}`, `{}`) due to upload limit",
-            &*wav_path, format_bytes(metadata(&*wav_path).unwrap().size())
-          ))
-        ).await.unwrap();
+            &*wav_path,
+            format_bytes(metadata(&*wav_path).unwrap().size())
+          )))
+          .await
+          .unwrap();
       } else if reply.is_ok() {
         remove_file(midi_path)?;
         remove_file(&*wav_path)?;
       }
     },
     Err(y) => {
-      ctx.send(CreateReply::default()
-        .content("Command didn't execute successfully, check console for more information!")
-      ).await.unwrap();
+      ctx
+        .send(CreateReply::default().content("Command didn't execute successfully, check console for more information!"))
+        .await
+        .unwrap();
 
       return Err(Error::from(format!("Midi conversion failed: {y}")))
     }

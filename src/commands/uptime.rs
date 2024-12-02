@@ -1,27 +1,29 @@
 use crate::{
   Error,
-  GIT_COMMIT_HASH,
   GIT_COMMIT_BRANCH,
+  GIT_COMMIT_HASH,
   internals::utils::{
     BOT_VERSION,
     format_duration
   }
 };
 
-use sysinfo::System;
-use uptime_lib::get;
-use std::{
-  fs::File,
-  path::Path,
-  time::{
-    Duration,
-    SystemTime,
-    UNIX_EPOCH
+use {
+  std::{
+    fs::File,
+    io::{
+      BufRead,
+      BufReader
+    },
+    path::Path,
+    time::{
+      Duration,
+      SystemTime,
+      UNIX_EPOCH
+    }
   },
-  io::{
-    BufRead,
-    BufReader
-  }
+  sysinfo::System,
+  uptime_lib::get
 };
 
 fn get_os_info() -> String {
@@ -32,13 +34,11 @@ fn get_os_info() -> String {
   if let Ok(file) = File::open(path) {
     let reader = BufReader::new(file);
     let set_value = |s: String| s.split('=').nth(1).unwrap_or_default().trim_matches('"').to_string();
-    reader.lines().map_while(Result::ok).for_each(|line| {
-      match line {
-        l if l.starts_with("NAME=") => name = set_value(l),
-        l if l.starts_with("VERSION=") => version = set_value(l),
-        l if l.starts_with("VERSION_ID=") => version = set_value(l),
-        _ => {}
-      }
+    reader.lines().map_while(Result::ok).for_each(|line| match line {
+      l if l.starts_with("NAME=") => name = set_value(l),
+      l if l.starts_with("VERSION=") => version = set_value(l),
+      l if l.starts_with("VERSION_ID=") => version = set_value(l),
+      _ => {}
     });
   }
 

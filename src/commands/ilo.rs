@@ -6,26 +6,28 @@ use crate::{
   }
 };
 
-use reqwest::{
-  ClientBuilder,
-  Error as ReqError
-};
-use serde::{
-  Serialize,
-  Deserialize
-};
-use poise::{
-  CreateReply,
-  serenity_prelude::{
-    CreateEmbed,
-    Timestamp
+use {
+  poise::{
+    CreateReply,
+    serenity_prelude::{
+      CreateEmbed,
+      Timestamp
+    }
+  },
+  reqwest::{
+    ClientBuilder,
+    Error as ReqError
+  },
+  serde::{
+    Deserialize,
+    Serialize
   }
 };
 
 #[derive(Serialize, Deserialize)]
 struct Chassis {
   #[serde(rename = "Fans")]
-  fans: Vec<Fan>,
+  fans:         Vec<Fan>,
   #[serde(rename = "Temperatures")]
   temperatures: Vec<Temperature>
 }
@@ -35,27 +37,27 @@ struct Fan {
   #[serde(rename = "CurrentReading")]
   current_reading: i32,
   #[serde(rename = "FanName")]
-  fan_name: String,
+  fan_name:        String,
   #[serde(rename = "Status")]
-  status: Status,
+  status:          Status
 }
 
 #[derive(Serialize, Deserialize)]
 struct Temperature {
   #[serde(rename = "CurrentReading")]
-  current_reading: i32,
+  current_reading:          i32,
   #[serde(rename = "Name")]
-  name: String,
+  name:                     String,
   #[serde(rename = "ReadingCelsius")]
-  reading_celsius: i32,
+  reading_celsius:          i32,
   #[serde(rename = "Status")]
-  status: Status,
+  status:                   Status,
   #[serde(rename = "Units")]
-  units: String,
+  units:                    String,
   #[serde(rename = "UpperThresholdCritical")]
   upper_threshold_critical: i32,
   #[serde(rename = "UpperThresholdFatal")]
-  upper_threshold_fatal: i32
+  upper_threshold_fatal:    i32
 }
 
 #[derive(Serialize, Deserialize)]
@@ -63,7 +65,7 @@ struct Status {
   #[serde(rename = "Health")]
   health: Option<String>,
   #[serde(rename = "State")]
-  state: String
+  state:  String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -73,7 +75,7 @@ struct Power {
   #[serde(rename = "PowerConsumedWatts")]
   power_consumed_watts: i32,
   #[serde(rename = "PowerMetrics")]
-  power_metrics: PowerMetrics
+  power_metrics:        PowerMetrics
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -81,21 +83,21 @@ struct PowerMetrics {
   #[serde(rename = "AverageConsumedWatts")]
   average_consumed_watts: i32,
   #[serde(rename = "MaxConsumedWatts")]
-  max_consumed_watts: i32,
+  max_consumed_watts:     i32,
   #[serde(rename = "MinConsumedWatts")]
-  min_consumed_watts: i32
+  min_consumed_watts:     i32
 }
 
 #[derive(Serialize, Deserialize)]
 struct System {
   #[serde(rename = "Memory")]
-  memory: Memory,
+  memory:            Memory,
   #[serde(rename = "Model")]
-  model: String,
+  model:             String,
   #[serde(rename = "Oem")]
-  oem: Oem,
+  oem:               Oem,
   #[serde(rename = "PowerState")]
-  power_state: String,
+  power_state:       String,
   #[serde(rename = "ProcessorSummary")]
   processor_summary: ProcessorSummary
 }
@@ -111,7 +113,7 @@ struct ProcessorSummary {
   #[serde(rename = "Count")]
   count: i32,
   #[serde(rename = "Model")]
-  cpu: String
+  cpu:   String
 }
 
 #[derive(Serialize, Deserialize)]
@@ -153,10 +155,7 @@ impl RedfishEndpoint {
 }
 
 async fn ilo_data(endpoint: RedfishEndpoint) -> Result<Box<dyn std::any::Any + Send>, ReqError> {
-  let client = ClientBuilder::new()
-    .danger_accept_invalid_certs(true)
-    .build()
-    .unwrap();
+  let client = ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
   let res = client
     .get(format!("https://{}/redfish/v1/{}", token_path().await.ilo_ip, endpoint.url()))
     .basic_auth(token_path().await.ilo_user, Some(token_path().await.ilo_pw))
@@ -168,15 +167,15 @@ async fn ilo_data(endpoint: RedfishEndpoint) -> Result<Box<dyn std::any::Any + S
     RedfishEndpoint::Thermal => {
       let body: Chassis = res.json().await.unwrap();
       Ok(Box::new(body))
-    }
+    },
     RedfishEndpoint::Power => {
       let body: Power = res.json().await.unwrap();
       Ok(Box::new(body))
-    }
+    },
     RedfishEndpoint::System => {
       let body: System = res.json().await.unwrap();
       Ok(Box::new(body))
-    }
+    },
     RedfishEndpoint::EventService => {
       let body: Event = res.json().await.unwrap();
       Ok(Box::new(body))
@@ -191,9 +190,7 @@ async fn ilo_data(endpoint: RedfishEndpoint) -> Result<Box<dyn std::any::Any + S
   interaction_context = "Guild|BotDm|PrivateChannel",
   subcommands("temperature", "power", "system")
 )]
-pub async fn ilo(_: super::PoiseCtx<'_>) -> Result<(), Error> {
-  Ok(())
-}
+pub async fn ilo(_: super::PoiseCtx<'_>) -> Result<(), Error> { Ok(()) }
 
 /// Retrieve the server's temperature data
 #[poise::command(slash_command)]
@@ -204,11 +201,7 @@ pub async fn temperature(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   let mut tempdata = String::new();
   let mut fandata = String::new();
 
-  let allowed_sensors = [
-    "01-Inlet Ambient",
-    "04-P1 DIMM 1-6",
-    "14-Chipset Zone"
-  ];
+  let allowed_sensors = ["01-Inlet Ambient", "04-P1 DIMM 1-6", "14-Chipset Zone"];
 
   for temp in &data.temperatures {
     if temp.reading_celsius == 0 || !allowed_sensors.contains(&temp.name.as_str()) {
@@ -232,16 +225,17 @@ pub async fn temperature(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
     fandata.push_str(&format!("**{}:** `{}%`\n", fan.fan_name, fan.current_reading));
   }
 
-  ctx.send(CreateReply::default().embed(
-    CreateEmbed::new()
-      .color(BINARY_PROPERTIES.embed_color)
-      .timestamp(Timestamp::now())
-      .title(format!("{} - Temperatures", ILO_HOSTNAME))
-      .fields(vec![
-        ("Temperatures", tempdata, false),
-        ("Fans", fandata, false)
-      ])
-  )).await?;
+  ctx
+    .send(
+      CreateReply::default().embed(
+        CreateEmbed::new()
+          .color(BINARY_PROPERTIES.embed_color)
+          .timestamp(Timestamp::now())
+          .title(format!("{} - Temperatures", ILO_HOSTNAME))
+          .fields(vec![("Temperatures", tempdata, false), ("Fans", fandata, false)])
+      )
+    )
+    .await?;
 
   Ok(())
 }
@@ -261,13 +255,17 @@ pub async fn power(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   powerdata.push_str(&format!("**Max Consumed:** `{}w`\n", &data.power_metrics.max_consumed_watts));
   powerdata.push_str(&format!("**Min Consumed:** `{}w`", &data.power_metrics.min_consumed_watts));
 
-  ctx.send(CreateReply::default().embed(
-    CreateEmbed::new()
-      .color(BINARY_PROPERTIES.embed_color)
-      .timestamp(Timestamp::now())
-      .title(format!("{} - Power", ILO_HOSTNAME))
-      .description(powerdata)
-  )).await?;
+  ctx
+    .send(
+      CreateReply::default().embed(
+        CreateEmbed::new()
+          .color(BINARY_PROPERTIES.embed_color)
+          .timestamp(Timestamp::now())
+          .title(format!("{} - Power", ILO_HOSTNAME))
+          .description(powerdata)
+      )
+    )
+    .await?;
 
   Ok(())
 }
@@ -277,10 +275,7 @@ pub async fn power(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
 pub async fn system(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   ctx.defer().await?;
 
-  let (ilo_sys, ilo_event) = tokio::join!(
-    ilo_data(RedfishEndpoint::System),
-    ilo_data(RedfishEndpoint::EventService)
-  );
+  let (ilo_sys, ilo_event) = tokio::join!(ilo_data(RedfishEndpoint::System), ilo_data(RedfishEndpoint::EventService));
 
   let ilo_sys = ilo_sys.unwrap();
   let ilo_event = ilo_event.unwrap();
@@ -300,22 +295,33 @@ pub async fn system(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
     println!("iLO:PostState = {}", system_data.oem.hp.post_state);
   }
 
-  data.push_str(&format!("**Health:** `{}`\n", event_data.status.health.as_ref().unwrap_or(&"Unknown".to_string())));
+  data.push_str(&format!(
+    "**Health:** `{}`\n",
+    event_data.status.health.as_ref().unwrap_or(&"Unknown".to_string())
+  ));
   data.push_str(&format!("**POST:** `{}`\n", post_state));
   data.push_str(&format!("**Power:** `{}`\n", &system_data.power_state));
   data.push_str(&format!("**Model:** `{}`", &system_data.model));
 
-  ctx.send(CreateReply::default().embed(
-    CreateEmbed::new()
-      .color(BINARY_PROPERTIES.embed_color)
-      .timestamp(Timestamp::now())
-      .title(format!("{} - System", ILO_HOSTNAME))
-      .description(data)
-      .fields(vec![
-        (format!("CPU ({}x)", system_data.processor_summary.count), system_data.processor_summary.cpu.trim().to_string(), true),
-        ("RAM".to_string(), format!("{} GB", system_data.memory.total_system_memory), true)
-      ])
-  )).await?;
+  ctx
+    .send(
+      CreateReply::default().embed(
+        CreateEmbed::new()
+          .color(BINARY_PROPERTIES.embed_color)
+          .timestamp(Timestamp::now())
+          .title(format!("{} - System", ILO_HOSTNAME))
+          .description(data)
+          .fields(vec![
+            (
+              format!("CPU ({}x)", system_data.processor_summary.count),
+              system_data.processor_summary.cpu.trim().to_string(),
+              true
+            ),
+            ("RAM".to_string(), format!("{} GB", system_data.memory.total_system_memory), true),
+          ])
+      )
+    )
+    .await?;
 
   Ok(())
 }

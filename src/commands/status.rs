@@ -7,12 +7,14 @@ use crate::{
   }
 };
 
-use serde_json::Value;
-use std::collections::HashMap;
-use tokio::join;
-use poise::{
-  CreateReply,
-  serenity_prelude::builder::CreateEmbed
+use {
+  poise::{
+    CreateReply,
+    serenity_prelude::builder::CreateEmbed
+  },
+  serde_json::Value,
+  std::collections::HashMap,
+  tokio::join
 };
 
 async fn pms_serverstatus(url: &str) -> Result<Vec<(String, Vec<Value>)>, Error> {
@@ -38,11 +40,10 @@ async fn pms_serverstatus(url: &str) -> Result<Vec<(String, Vec<Value>)>, Error>
 
 fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, String, bool)> {
   let mut server_map: HashMap<String, Vec<(String, String)>> = HashMap::new();
-  let id_name_map: HashMap<&str, &str> = [
-    ("wotbsg", "ASIA"),
-    ("wowssg", "WoWS (ASIA)"),
-    ("wowseu", "WoWS (EU)")
-  ].iter().cloned().collect();
+  let id_name_map: HashMap<&str, &str> = [("wotbsg", "ASIA"), ("wowssg", "WoWS (ASIA)"), ("wowseu", "WoWS (EU)")]
+    .iter()
+    .cloned()
+    .collect();
 
   for (title, mapped_servers) in servers {
     for server in mapped_servers {
@@ -54,26 +55,28 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
         _ => "Unknown"
       };
       let name = id_name_map.get(id).unwrap_or(&name);
-      server_map.entry(title.clone()).or_default().push((name.to_owned().to_string(), status.to_owned()));
+      server_map
+        .entry(title.clone())
+        .or_default()
+        .push((name.to_owned().to_string(), status.to_owned()));
     }
   }
 
   let mut statuses = Vec::new();
   for (title, servers) in server_map {
-    let servers_str = servers.iter().map(|(name, status)| format!("{}: {}", name, status)).collect::<Vec<String>>().join("\n");
+    let servers_str = servers
+      .iter()
+      .map(|(name, status)| format!("{}: {}", name, status))
+      .collect::<Vec<String>>()
+      .join("\n");
     statuses.push((title, servers_str, true));
   }
   statuses
 }
 
 /// Query the server statuses
-#[poise::command(
-  slash_command,
-  subcommands("wg")
-)]
-pub async fn status(_: super::PoiseCtx<'_>) -> Result<(), Error> {
-  Ok(())
-}
+#[poise::command(slash_command, subcommands("wg"))]
+pub async fn status(_: super::PoiseCtx<'_>) -> Result<(), Error> { Ok(()) }
 
 /// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
@@ -86,7 +89,9 @@ pub async fn wg(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   let joined_pms_servers = [servers_eu.unwrap(), servers_asia.unwrap()].concat();
   let pms_servers = process_pms_statuses(joined_pms_servers.to_vec());
 
-  ctx.send(CreateReply::default().embed(embed.title("Wargaming Server Status").fields(pms_servers))).await?;
+  ctx
+    .send(CreateReply::default().embed(embed.title("Wargaming Server Status").fields(pms_servers)))
+    .await?;
 
   Ok(())
 }

@@ -1,7 +1,7 @@
 [package]
 name = "kon"
-version = "0.5.0"
-edition = "2021"
+version = "0.5.1"
+edition = "2024"
 
 [dependencies]
 bb8 = "0.8.6"
@@ -14,8 +14,8 @@ regex = "1.11.1"
 reqwest = { version = "0.12.9", features = ["json", "native-tls-vendored"] }
 serde = "1.0.215"
 serde_json = "1.0.133"
-sysinfo = "0.32.0"
-tokenservice-client = { version = "0.4.0", registry = "gitea" }
+sysinfo = "0.32.1"
+tokenservice-client = { version = "0.4.1", registry = "gitea" }
 tokio = { version = "1.41.1", features = ["macros", "signal", "rt-multi-thread"] }
 uptime_lib = "0.3.1"
 

@@ -1,20 +1,24 @@
-use crate::Error;
-use super::{
-  super::task_err,
-  REDIS_EXPIRY_SECS,
-  get_redis,
-  save_to_redis,
-  fetch_feed,
-  parse,
-  format_href_to_discord
+use {
+  super::{
+    super::task_err,
+    REDIS_EXPIRY_SECS,
+    fetch_feed,
+    format_href_to_discord,
+    get_redis,
+    parse,
+    save_to_redis
+  },
+  crate::Error
 };
 
-use std::io::Cursor;
-use regex::Regex;
-use poise::serenity_prelude::{
-  CreateEmbed,
-  CreateEmbedAuthor,
-  Timestamp
+use {
+  poise::serenity_prelude::{
+    CreateEmbed,
+    CreateEmbedAuthor,
+    Timestamp
+  },
+  regex::Regex,
+  std::io::Cursor
 };
 
 pub async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
@@ -57,23 +61,30 @@ pub async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
       Ok(None)
     } else {
       save_to_redis(rkey, &article.categories[3].term).await?;
-      Ok(Some(CreateEmbed::new()
-        .color(0x4EFBCB)
-        .author(CreateEmbedAuthor::new(feed.title.unwrap().content).url(home_page))
-        .thumbnail(feed.logo.unwrap().uri)
-        .description(format!(
-          "{} {} for {} {} has been rolled out!\n{}",
-          article.categories[2].term,
-          article.categories[3].term,
-          article.categories[0].term,
-          article.categories[1].term,
-          format_href_to_discord(article.summary.unwrap().content.as_str())
-        ))
-        .timestamp(Timestamp::from(article.updated.unwrap())))
-      )
+      Ok(Some(
+        CreateEmbed::new()
+          .color(0x4EFBCB)
+          .author(CreateEmbedAuthor::new(feed.title.unwrap().content).url(home_page))
+          .thumbnail(feed.logo.unwrap().uri)
+          .description(format!(
+            "{} {} for {} {} has been rolled out!\n{}",
+            article.categories[2].term,
+            article.categories[3].term,
+            article.categories[0].term,
+            article.categories[1].term,
+            format_href_to_discord(article.summary.unwrap().content.as_str())
+          ))
+          .timestamp(Timestamp::from(article.updated.unwrap()))
+      ))
     }
   } else {
-    task_err("RSS:ESXi", &format!("Article term does not match the expected RegEx pattern! ({})", article.categories[3].term.as_str()));
+    task_err(
+      "RSS:ESXi",
+      &format!(
+        "Article term does not match the expected RegEx pattern! ({})",
+        article.categories[3].term.as_str()
+      )
+    );
     Ok(None)
   }
 }

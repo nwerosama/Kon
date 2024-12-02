@@ -1,16 +1,20 @@
 use crate::internals::utils::token_path;
 
-use bb8_redis::{
-  bb8::Pool,
-  redis::cmd,
-  redis::RedisError,
-  redis::RedisResult,
-  redis::AsyncCommands,
-  RedisConnectionManager
-};
-use tokio::time::{
-  Duration,
-  sleep
+use {
+  bb8_redis::{
+    RedisConnectionManager,
+    bb8::Pool,
+    redis::{
+      AsyncCommands,
+      RedisError,
+      RedisResult,
+      cmd
+    }
+  },
+  tokio::time::{
+    Duration,
+    sleep
+  }
 };
 
 #[derive(Debug)]
@@ -31,27 +35,35 @@ impl RedisController {
 
     loop {
       match Pool::builder().max_size(20).retry_connection(true).build(manager.clone()).await {
-        Ok(pool) => {
-          match pool.get().await {
-            Ok(mut conn) => {
-              let ping: RedisResult<String> = cmd("PING").query_async(&mut *conn).await;
-              match ping {
-                Ok(_) => {
-                  println!("Redis[Info]: Successfully connected");
-                  return pool.clone();
-                },
-                Err(e) => {
-                  eprintln!("{}", redis_err.replace("{{ e }}", &e.to_string()).replace("{{ backoff }}", &backoff.to_string()));
-                  Self::apply_backoff(&mut backoff).await;
-                }
+        Ok(pool) => match pool.get().await {
+          Ok(mut conn) => {
+            let ping: RedisResult<String> = cmd("PING").query_async(&mut *conn).await;
+            match ping {
+              Ok(_) => {
+                println!("Redis[Info]: Successfully connected");
+                return pool.clone();
+              },
+              Err(e) => {
+                eprintln!(
+                  "{}",
+                  redis_err
+                    .replace("{{ e }}", &e.to_string())
+                    .replace("{{ backoff }}", &backoff.to_string())
+                );
+                Self::apply_backoff(&mut backoff).await;
               }
-            },
-            Err(e) => {
-              eprintln!("{}", redis_err.replace("{{ e }}", &e.to_string()).replace("{{ backoff }}", &backoff.to_string()));
-              Self::apply_backoff(&mut backoff).await;
             }
+          },
+          Err(e) => {
+            eprintln!(
+              "{}",
+              redis_err
+                .replace("{{ e }}", &e.to_string())
+                .replace("{{ backoff }}", &backoff.to_string())
+            );
+            Self::apply_backoff(&mut backoff).await;
           }
-        }
+        },
         Err(e) => {
           eprintln!("Redis[PoolError]: {e}, retrying in {backoff} seconds");
           Self::apply_backoff(&mut backoff).await;
@@ -68,24 +80,38 @@ impl RedisController {
   }
 
   /// Get a key from the cache
-  pub async fn get(&self, key: &str) -> RedisResult<Option<String>> {
+  pub async fn get(
+    &self,
+    key: &str
+  ) -> RedisResult<Option<String>> {
     let mut conn = self.pool.get().await.unwrap();
     conn.get(key).await
   }
 
-  pub async fn del(&self, key: &str) -> RedisResult<()> {
+  pub async fn del(
+    &self,
+    key: &str
+  ) -> RedisResult<()> {
     let mut conn = self.pool.get().await.unwrap();
     conn.del(key).await
   }
 
   /// Set a key with a value in the cache
-  pub async fn set(&self, key: &str, value: &str) -> RedisResult<()> {
+  pub async fn set(
+    &self,
+    key: &str,
+    value: &str
+  ) -> RedisResult<()> {
     let mut conn = self.pool.get().await.unwrap();
     conn.set(key, value).await
   }
 
   /// Set a key with an expiration time in seconds
-  pub async fn expire(&self, key: &str, seconds: i64) -> RedisResult<()> {
+  pub async fn expire(
+    &self,
+    key: &str,
+    seconds: i64
+  ) -> RedisResult<()> {
     let mut conn = self.pool.get().await.unwrap();
     conn.expire(key, seconds).await
   }

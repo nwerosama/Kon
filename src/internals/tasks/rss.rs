@@ -5,32 +5,36 @@ mod github;
 mod gportal;
 mod rust;
 
-use crate::{
-  Error,
-  controllers::cache::RedisController
-};
-use super::{
+use {
   super::{
-    http::HttpClient,
-    config::BINARY_PROPERTIES
+    super::{
+      config::BINARY_PROPERTIES,
+      http::HttpClient
+    },
+    task_err,
+    task_info
   },
-  task_info,
-  task_err
+  crate::{
+    Error,
+    controllers::cache::RedisController
+  }
 };
 
-use once_cell::sync::OnceCell;
-use feed_rs::parser::parse;
-use reqwest::Response;
-use regex::Regex;
-use std::sync::Arc;
-use poise::serenity_prelude::{
-  Context,
-  CreateEmbed,
-  Timestamp
-};
-use tokio::time::{
-  Duration,
-  interval
+use {
+  feed_rs::parser::parse,
+  once_cell::sync::OnceCell,
+  poise::serenity_prelude::{
+    Context,
+    CreateEmbed,
+    Timestamp
+  },
+  regex::Regex,
+  reqwest::Response,
+  std::sync::Arc,
+  tokio::time::{
+    Duration,
+    interval
+  }
 };
 
 const TASK_NAME: &str = "RSS";
@@ -88,7 +92,10 @@ async fn fetch_feed(url: &str) -> Result<Response, Error> {
   Ok(res)
 }
 
-async fn save_to_redis(key: &str, value: &str) -> Result<(), Error> {
+async fn save_to_redis(
+  key: &str,
+  value: &str
+) -> Result<(), Error> {
   let redis = get_redis().await;
   redis.set(key, value).await.unwrap();
   if let Err(y) = redis.expire(key, REDIS_EXPIRY_SECS).await {
@@ -132,11 +139,11 @@ enum IncidentColorMap {
 impl IncidentColorMap {
   fn color(&self) -> u32 {
     match self {
-      Self::Update => 0xABDD9E, // Madang
+      Self::Update => 0xABDD9E,        // Madang
       Self::Investigating => 0xA5CCE0, // French Pass
-      Self::Monitoring => 0x81CBAD, // Monte Carlo
-      Self::Resolved => 0x57F287, // Emerald
-      Self::Default => 0x81CBAD // Monte Carlo
+      Self::Monitoring => 0x81CBAD,    // Monte Carlo
+      Self::Resolved => 0x57F287,      // Emerald
+      Self::Default => 0x81CBAD        // Monte Carlo
     }
   }
 }

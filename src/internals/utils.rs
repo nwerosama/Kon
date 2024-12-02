@@ -1,8 +1,10 @@
-use poise::serenity_prelude::UserId;
-use std::sync::LazyLock;
-use tokio::sync::Mutex;
-use tokenservice_client::TokenServiceApi;
-use super::tsclient::TSClient;
+use {
+  super::tsclient::TSClient,
+  poise::serenity_prelude::UserId,
+  std::sync::LazyLock,
+  tokenservice_client::TokenServiceApi,
+  tokio::sync::Mutex
+};
 
 pub static BOT_VERSION: LazyLock<String> = LazyLock::new(|| {
   let cargo_version = cargo_toml::Manifest::from_str(include_str!("../../Cargo.toml"))
@@ -16,9 +18,7 @@ pub static BOT_VERSION: LazyLock<String> = LazyLock::new(|| {
 
 static TSCLIENT: LazyLock<Mutex<TSClient>> = LazyLock::new(|| Mutex::new(TSClient::new()));
 
-pub async fn token_path() -> TokenServiceApi {
-  TSCLIENT.lock().await.get().await.unwrap()
-}
+pub async fn token_path() -> TokenServiceApi { TSCLIENT.lock().await.get().await.unwrap() }
 
 pub fn mention_dev(ctx: poise::Context<'_, (), crate::Error>) -> Option<String> {
   let devs = super::config::BINARY_PROPERTIES.developers.clone();
@@ -32,11 +32,7 @@ pub fn mention_dev(ctx: poise::Context<'_, (), crate::Error>) -> Option<String> 
     }
   }
 
-  if mentions.is_empty() {
-    None
-  } else {
-    Some(mentions.join(", "))
-  }
+  if mentions.is_empty() { None } else { Some(mentions.join(", ")) }
 }
 
 pub fn format_duration(secs: u64) -> String {

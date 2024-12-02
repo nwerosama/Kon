@@ -14,9 +14,7 @@ impl TSClient {
 
   pub async fn get(&self) -> Result<TokenServiceApi, crate::Error> {
     match self.0.connect().await {
-      Ok(api) => {
-        Ok(api)
-      }
+      Ok(api) => Ok(api),
       Err(e) => Err(e)
     }
   }

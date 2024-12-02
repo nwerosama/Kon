@@ -1,34 +1,35 @@
 use super::{
-  task_err,
-  TASK_NAME,
   BINARY_PROPERTIES,
-  get_redis,
+  TASK_NAME,
   esxi::esxi_embed,
+  get_redis,
   github::github_embed,
   gportal::gportal_embed,
-  rust::rust_message
+  rust::rust_message,
+  task_err
 };
 
-use regex::Regex;
-use tokio::time::{
-  Duration,
-  sleep
-};
-use poise::serenity_prelude::{
-  Context,
-  ChannelId,
-  EditMessage,
-  CreateMessage,
-  CreateEmbed,
+use {
+  poise::serenity_prelude::{
+    ChannelId,
+    Context,
+    CreateEmbed,
+    CreateMessage,
+    EditMessage
+  },
+  regex::Regex,
+  tokio::time::{
+    Duration,
+    sleep
+  }
 };
 
-  //  This is for building up the embed with the feed data
-  /* std::fs::File::create("rss_name.log").unwrap();
-  std::fs::write("rss_name.log", format!("{:#?}", feed))?; */
+//  This is for building up the embed with the feed data
+/* std::fs::File::create("rss_name.log").unwrap();
+std::fs::write("rss_name.log", format!("{:#?}", feed))?; */
 
 // todo; have a reusable function for feeding RSS data and building the embed out of it.
 //       see github.rs / esxi.rs / gportal.rs for references of this idea.
-
 
 async fn process_embed(
   ctx: &Context,
@@ -74,11 +75,17 @@ pub async fn feed_processor(ctx: &Context) {
 
   match esxi_embed().await {
     Ok(Some(embed)) => {
-      ChannelId::new(BINARY_PROPERTIES.rss_channel).send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await.unwrap();
+      ChannelId::new(BINARY_PROPERTIES.rss_channel)
+        .send_message(&ctx.http, CreateMessage::new().add_embed(embed))
+        .await
+        .unwrap();
     },
     Ok(None) => (),
     Err(y) => {
-      log_msgs.push(format!("**[{TASK_NAME}:ESXi:Error]:** Feed failed with the following error:```\n{}\n```", y));
+      log_msgs.push(format!(
+        "**[{TASK_NAME}:ESXi:Error]:** Feed failed with the following error:```\n{}\n```",
+        y
+      ));
       task_err(TASK_NAME, &y.to_string())
     }
   }
@@ -87,7 +94,10 @@ pub async fn feed_processor(ctx: &Context) {
     Ok(Some(embed)) => process_embed(ctx, Some(embed), "RSS_GPortal_MsgID", "RSS_GPortal_Content").await.unwrap(),
     Ok(None) => (),
     Err(y) => {
-      log_msgs.push(format!("**[{TASK_NAME}:GPortal:Error]:** Feed failed with the following error:```\n{}\n```", y));
+      log_msgs.push(format!(
+        "**[{TASK_NAME}:GPortal:Error]:** Feed failed with the following error:```\n{}\n```",
+        y
+      ));
       task_err(TASK_NAME, &y.to_string())
     }
   }
@@ -96,25 +106,35 @@ pub async fn feed_processor(ctx: &Context) {
     Ok(Some(embed)) => process_embed(ctx, Some(embed), "RSS_GitHub_MsgID", "RSS_GitHub_Content").await.unwrap(),
     Ok(None) => (),
     Err(y) => {
-      log_msgs.push(format!("**[{TASK_NAME}:GitHub:Error]:** Feed failed with the following error:```\n{}\n```", y));
+      log_msgs.push(format!(
+        "**[{TASK_NAME}:GitHub:Error]:** Feed failed with the following error:```\n{}\n```",
+        y
+      ));
       task_err(TASK_NAME, &y.to_string())
     }
   }
 
   match rust_message().await {
     Ok(Some(content)) => {
-      ChannelId::new(BINARY_PROPERTIES.rss_channel).send_message(&ctx.http, CreateMessage::new().content(content)).await.unwrap();
+      ChannelId::new(BINARY_PROPERTIES.rss_channel)
+        .send_message(&ctx.http, CreateMessage::new().content(content))
+        .await
+        .unwrap();
     },
     Ok(None) => (),
     Err(y) => {
-      log_msgs.push(format!("**[{TASK_NAME}:RustBlog:Error]:** Feed failed with the following error:```\n{}\n```", y));
+      log_msgs.push(format!(
+        "**[{TASK_NAME}:RustBlog:Error]:** Feed failed with the following error:```\n{}\n```",
+        y
+      ));
       task_err(TASK_NAME, &y.to_string())
     }
   }
 
   if !log_msgs.is_empty() {
-    ChannelId::new(BINARY_PROPERTIES.kon_logs).send_message(
-      &ctx.http, CreateMessage::new().content(log_msgs.join("\n"))
-    ).await.unwrap();
+    ChannelId::new(BINARY_PROPERTIES.kon_logs)
+      .send_message(&ctx.http, CreateMessage::new().content(log_msgs.join("\n")))
+      .await
+      .unwrap();
   }
 }

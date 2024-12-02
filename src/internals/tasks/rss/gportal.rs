@@ -1,22 +1,26 @@
-use crate::Error;
-use super::{
-  super::task_err,
-  REDIS_EXPIRY_SECS,
-  IncidentColorMap,
-  get_redis,
-  save_to_redis,
-  fetch_feed,
-  parse,
-  embed,
-  trim_old_content,
-  format_html_to_discord
+use {
+  super::{
+    super::task_err,
+    IncidentColorMap,
+    REDIS_EXPIRY_SECS,
+    embed,
+    fetch_feed,
+    format_html_to_discord,
+    get_redis,
+    parse,
+    save_to_redis,
+    trim_old_content
+  },
+  crate::Error
 };
 
-use std::io::Cursor;
-use regex::Regex;
-use poise::serenity_prelude::{
-  CreateEmbed,
-  Timestamp
+use {
+  poise::serenity_prelude::{
+    CreateEmbed,
+    Timestamp
+  },
+  regex::Regex,
+  std::io::Cursor
 };
 
 pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
@@ -48,7 +52,11 @@ pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
   let resolved_patt = Regex::new(r"(?i)\bresolved\b").unwrap();
   let date_patt = Regex::new(r"\b[A-Z][a-z]{2} \d{2}, \d{2}:\d{2} UTC\b").unwrap();
 
-  let first_entry = date_patt.split(&new_content).map(str::trim).find(|e| !e.is_empty()).unwrap_or(&new_content);
+  let first_entry = date_patt
+    .split(&new_content)
+    .map(str::trim)
+    .find(|e| !e.is_empty())
+    .unwrap_or(&new_content);
 
   let color: u32 = if update_patt.is_match(first_entry) {
     IncidentColorMap::Update.color()
@@ -99,7 +107,10 @@ pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
       )))
     }
   } else {
-    task_err("RSS:GPortal", &format!("Incident ID does not match the expected RegEx pattern! ({})", &article.links[0].href));
+    task_err(
+      "RSS:GPortal",
+      &format!("Incident ID does not match the expected RegEx pattern! ({})", &article.links[0].href)
+    );
     Ok(None)
   }
 }

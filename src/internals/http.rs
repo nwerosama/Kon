@@ -1,8 +1,10 @@
-use std::time::Duration;
-use reqwest::{
-  Client,
-  Response,
-  Error
+use {
+  reqwest::{
+    Client,
+    Error,
+    Response
+  },
+  std::time::Duration
 };
 
 const ERROR_PREFIX: &str = "HTTPClient[Error]:";
@@ -10,12 +12,17 @@ const ERROR_PREFIX: &str = "HTTPClient[Error]:";
 pub struct HttpClient(Client);
 
 impl HttpClient {
-  pub fn new() -> Self {
-    Self(Client::new())
-  }
+  pub fn new() -> Self { Self(Client::new()) }
 
-  pub async fn get(&self, url: &str, ua: &str) -> Result<Response, Error> {
-    let response = self.0.get(url).header(
+  pub async fn get(
+    &self,
+    url: &str,
+    ua: &str
+  ) -> Result<Response, Error> {
+    let response = self
+      .0
+      .get(url)
+      .header(
         reqwest::header::USER_AGENT,
         format!("Kon ({}-{}) - {ua}/reqwest", super::utils::BOT_VERSION.as_str(), crate::GIT_COMMIT_HASH)
       )

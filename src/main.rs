@@ -5,35 +5,37 @@ mod internals;
 // Using the new filesystem hierarchy
 
 use crate::internals::{
+  config::BINARY_PROPERTIES,
+  tasks::{
+    rss,
+    run_task
+  },
   utils::{
     BOT_VERSION,
-    token_path,
-    mention_dev
-  },
-  tasks::{
-    run_task,
-    rss
-  },
-  config::BINARY_PROPERTIES
+    mention_dev,
+    token_path
+  }
 };
 
-use std::{
-  sync::Arc,
-  borrow::Cow,
-  thread::current
-};
-use poise::serenity_prelude::{
-  builder::{
-    CreateMessage,
-    CreateEmbed,
-    CreateEmbedAuthor
+use {
+  poise::serenity_prelude::{
+    ChannelId,
+    ClientBuilder,
+    Context,
+    FullEvent,
+    GatewayIntents,
+    Ready,
+    builder::{
+      CreateEmbed,
+      CreateEmbedAuthor,
+      CreateMessage
+    }
   },
-  Ready,
-  Context,
-  FullEvent,
-  ClientBuilder,
-  ChannelId,
-  GatewayIntents
+  std::{
+    borrow::Cow,
+    sync::Arc,
+    thread::current
+  }
 };
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -67,7 +69,9 @@ async fn on_ready(
     .thumbnail(ready.user.avatar_url().unwrap_or_default())
     .author(CreateEmbedAuthor::new(format!("{} is ready!", ready.user.name)));
 
-  ChannelId::new(BINARY_PROPERTIES.ready_notify).send_message(&ctx.http, message.add_embed(ready_embed)).await?;
+  ChannelId::new(BINARY_PROPERTIES.ready_notify)
+    .send_message(&ctx.http, message.add_embed(ready_embed))
+    .await?;
 
   Ok(())
 }
@@ -104,7 +108,7 @@ async fn main() {
         commands::ping::ping(),
         commands::status::status(),
         commands::midi::midi_to_wav(),
-        commands::uptime::uptime()
+        commands::uptime::uptime(),
       ],
       prefix_options: poise::PrefixFrameworkOptions {
         prefix,
@@ -114,35 +118,37 @@ async fn main() {
         ignore_thread_creation: true,
         ..Default::default()
       },
-      pre_command: |ctx| Box::pin(async move {
-        let get_guild_name = match ctx.guild() {
-          Some(guild) => guild.name.clone(),
-          None => String::from("Direct Message")
-        };
-        println!(
-          "Discord[{get_guild_name}]: {} ran /{}",
-          ctx.author().name,
-          ctx.command().qualified_name
-        );
-      }),
-      on_error: |error| Box::pin(async move {
-        match error {
-          poise::FrameworkError::Command { error, ctx, .. } => {
-            println!("PoiseCommandError({}): {error}", ctx.command().qualified_name);
-            ctx.reply(format!(
-              "Encountered an error during command execution, ask {} to check console for more details!",
-              mention_dev(ctx).unwrap_or_default()
-            )).await.expect("Error sending message");
-          },
-          poise::FrameworkError::EventHandler { error, event, .. } => println!("PoiseEventHandlerError({}): {error}", event.snake_case_name()),
-          poise::FrameworkError::UnknownInteraction { interaction, .. } => println!(
-            "PoiseUnknownInteractionError: {} tried to execute an unknown interaction ({})",
-            interaction.user.name,
-            interaction.data.name
-          ),
-          other => println!("PoiseOtherError: {other}")
-        }
-      }),
+      pre_command: |ctx| {
+        Box::pin(async move {
+          let get_guild_name = match ctx.guild() {
+            Some(guild) => guild.name.clone(),
+            None => String::from("Direct Message")
+          };
+          println!("Discord[{get_guild_name}]: {} ran /{}", ctx.author().name, ctx.command().qualified_name);
+        })
+      },
+      on_error: |error| {
+        Box::pin(async move {
+          match error {
+            poise::FrameworkError::Command { error, ctx, .. } => {
+              println!("PoiseCommandError({}): {error}", ctx.command().qualified_name);
+              ctx
+                .reply(format!(
+                  "Encountered an error during command execution, ask {} to check console for more details!",
+                  mention_dev(ctx).unwrap_or_default()
+                ))
+                .await
+                .expect("Error sending message");
+            },
+            poise::FrameworkError::EventHandler { error, event, .. } => println!("PoiseEventHandlerError({}): {error}", event.snake_case_name()),
+            poise::FrameworkError::UnknownInteraction { interaction, .. } => println!(
+              "PoiseUnknownInteractionError: {} tried to execute an unknown interaction ({})",
+              interaction.user.name, interaction.data.name
+            ),
+            other => println!("PoiseOtherError: {other}")
+          }
+        })
+      },
       initialize_owners: true,
       event_handler: |framework, event| Box::pin(event_processor(framework, event)),
       ..Default::default()
@@ -152,12 +158,11 @@ async fn main() {
 
   let mut client = ClientBuilder::new(
     token_path().await.main,
-    GatewayIntents::GUILDS
-    | GatewayIntents::GUILD_MESSAGES
-    | GatewayIntents::MESSAGE_CONTENT
+    GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT
   )
   .framework(framework)
-  .await.expect("Error creating client");
+  .await
+  .expect("Error creating client");
 
   if let Err(why) = client.start().await {
     println!("Error starting client: {why:#?}");

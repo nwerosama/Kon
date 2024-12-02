@@ -2,31 +2,41 @@ mod rss;
 
 pub use rss::rss;
 
-use tokio::task::spawn;
-use poise::serenity_prelude::Context;
-use std::{
-  sync::{
-    Arc,
-    atomic::{
-      AtomicBool,
-      Ordering
+use {
+  poise::serenity_prelude::Context,
+  std::{
+    future::Future,
+    sync::{
+      Arc,
+      atomic::{
+        AtomicBool,
+        Ordering
+      }
     }
   },
-  future::Future
+  tokio::task::spawn
 };
 
-fn task_info(name: &str, message: &str) {
+fn task_info(
+  name: &str,
+  message: &str
+) {
   println!("TaskScheduler[{name}]: {message}")
 }
 
-fn task_err(name: &str, message: &str) {
+fn task_err(
+  name: &str,
+  message: &str
+) {
   eprintln!("TaskScheduler[{name}:Error]: {message}")
 }
 
 static TASK_RUNNING: AtomicBool = AtomicBool::new(false);
 
-pub async fn run_task<F, T>(ctx: Arc<Context>, task: F)
-where
+pub async fn run_task<F, T>(
+  ctx: Arc<Context>,
+  task: F
+) where
   F: Fn(Arc<Context>) -> T + Send + 'static,
   T: Future<Output = Result<(), crate::Error>> + Send + 'static
 {

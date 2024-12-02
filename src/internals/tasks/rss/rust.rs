@@ -1,15 +1,19 @@
-use crate::Error;
-use super::{
-  task_err,
-  REDIS_EXPIRY_SECS,
-  get_redis,
-  save_to_redis,
-  fetch_feed,
-  parse
+use {
+  super::{
+    REDIS_EXPIRY_SECS,
+    fetch_feed,
+    get_redis,
+    parse,
+    save_to_redis,
+    task_err
+  },
+  crate::Error
 };
 
-use std::io::Cursor;
-use regex::Regex;
+use {
+  regex::Regex,
+  std::io::Cursor
+};
 
 pub async fn rust_message() -> Result<Option<String>, Error> {
   let redis = get_redis().await;
@@ -44,10 +48,17 @@ pub async fn rust_message() -> Result<Option<String>, Error> {
       Ok(None)
     } else {
       save_to_redis(rkey, &blog).await?;
-      Ok(Some(format!("Rust Team has put out a new article!\n**[{}](<{}>)**", article.links[0].title.clone().unwrap(), article.links[0].href)))
+      Ok(Some(format!(
+        "Rust Team has put out a new article!\n**[{}](<{}>)**",
+        article.links[0].title.clone().unwrap(),
+        article.links[0].href
+      )))
     }
   } else {
-    task_err("RSS:RustBlog", &format!("Article URL does not match the expected RegEx pattern! ({})", article_id));
+    task_err(
+      "RSS:RustBlog",
+      &format!("Article URL does not match the expected RegEx pattern! ({})", article_id)
+    );
     Ok(None)
   }
 }

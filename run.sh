@@ -1,3 +1,3 @@
 #!/bin/bash
 
-clear && cargo run kon_dev
+clear && cargo fmt && cargo run kon_dev
