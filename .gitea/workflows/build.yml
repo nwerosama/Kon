@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action # v3
+        uses: docker/setup-buildx-action
 
       - name: Checkout
-        uses: actions/checkout # v4
+        uses: actions/checkout
 
       - name: Install zstd
         run: sudo apt-get update && sudo apt-get install -y zstd
@@ -32,7 +32,7 @@ jobs:
           cat hash.txt
 
       - name: Cache
-        uses: actions/cache # v4
+        uses: actions/cache
         id: cache
         with:
           save-always: true
@@ -45,14 +45,14 @@ jobs:
           key: ${{ runner.os }}-cache-${{ steps.cargo-cache-key.outputs.hash }}
 
       - name: Login to Gitea
-        uses: docker/login-action # v3
+        uses: docker/login-action
         with:
           registry: git.toast-server.net
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Set up Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain # v1
+        uses: actions-rust-lang/setup-rust-toolchain
         with:
           rustflags: -C target-feature=-crt-static
 
@@ -69,7 +69,7 @@ jobs:
           cargo zigbuild --target x86_64-unknown-linux-musl --locked -rF production
 
       - name: Build and push image
-        uses: docker/build-push-action # v6
+        uses: docker/build-push-action
         with:
           context: .
           platforms: linux/amd64
@@ -84,7 +84,7 @@ jobs:
     needs: build
     steps:
       - name: Deploy update
-        uses: appleboy/ssh-action # v1
+        uses: appleboy/ssh-action
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
