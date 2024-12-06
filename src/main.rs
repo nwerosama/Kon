@@ -1,23 +1,23 @@
-mod commands;
-mod controllers;
-mod internals;
 // https://cdn.toast-server.net/RustFSHiearchy.png
 // Using the new filesystem hierarchy
 
-use crate::internals::{
-  config::BINARY_PROPERTIES,
-  tasks::{
+use {
+  kon_cmds::register_cmds,
+  kon_libs::{
+    BINARY_PROPERTIES,
+    BOT_VERSION,
+    GIT_COMMIT_BRANCH,
+    GIT_COMMIT_HASH,
+    KonData,
+    KonResult,
+    PoiseFwCtx,
+    mention_dev
+  },
+  kon_tasks::{
     rss,
     run_task
   },
-  utils::{
-    BOT_VERSION,
-    mention_dev,
-    token_path
-  }
-};
-
-use {
+  kon_tokens::token_path,
   poise::serenity_prelude::{
     ChannelId,
     ClientBuilder,
@@ -38,20 +38,10 @@ use {
   }
 };
 
-type Error = Box<dyn std::error::Error + Send + Sync>;
-
-#[cfg(feature = "production")]
-pub static GIT_COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
-pub static GIT_COMMIT_BRANCH: &str = env!("GIT_COMMIT_BRANCH");
-
-#[cfg(not(feature = "production"))]
-pub static GIT_COMMIT_HASH: &str = "devel";
-
 async fn on_ready(
   ctx: &Context,
-  ready: &Ready,
-  _framework: &poise::Framework<(), Error>
-) -> Result<(), Error> {
+  ready: &Ready
+) -> KonResult<KonData> {
   #[cfg(not(feature = "production"))]
   {
     println!("Event[Ready][Notice]: Detected a non-production environment!");
@@ -73,13 +63,13 @@ async fn on_ready(
     .send_message(&ctx.http, message.add_embed(ready_embed))
     .await?;
 
-  Ok(())
+  Ok(KonData {})
 }
 
 async fn event_processor(
-  framework: poise::FrameworkContext<'_, (), Error>,
+  framework: PoiseFwCtx<'_>,
   event: &FullEvent
-) -> Result<(), Error> {
+) -> KonResult<()> {
   if let FullEvent::Ready { .. } = event {
     let thread_id = format!("{:?}", current().id());
     let thread_num: String = thread_id.chars().filter(|c| c.is_ascii_digit()).collect();
@@ -102,14 +92,7 @@ async fn main() {
 
   let framework = poise::Framework::builder()
     .options(poise::FrameworkOptions {
-      commands: vec![
-        commands::deploy(),
-        commands::ilo::ilo(),
-        commands::ping::ping(),
-        commands::status::status(),
-        commands::midi::midi_to_wav(),
-        commands::uptime::uptime(),
-      ],
+      commands: register_cmds(),
       prefix_options: poise::PrefixFrameworkOptions {
         prefix,
         mention_as_prefix: false,
@@ -122,7 +105,7 @@ async fn main() {
         Box::pin(async move {
           let get_guild_name = match ctx.guild() {
             Some(guild) => guild.name.clone(),
-            None => String::from("Direct Message")
+            None => String::from("DM/User-App")
           };
           println!("Discord[{get_guild_name}]: {} ran /{}", ctx.author().name, ctx.command().qualified_name);
         })
@@ -153,7 +136,7 @@ async fn main() {
       event_handler: |framework, event| Box::pin(event_processor(framework, event)),
       ..Default::default()
     })
-    .setup(|ctx, ready, framework| Box::pin(on_ready(ctx, ready, framework)))
+    .setup(|ctx, ready, _| Box::pin(on_ready(ctx, ready)))
     .build();
 
   let mut client = ClientBuilder::new(

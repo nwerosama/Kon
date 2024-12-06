@@ -1,13 +1,5 @@
-use crate::{
-  Error,
-  internals::{
-    config::BINARY_PROPERTIES,
-    http::HttpClient,
-    utils::token_path
-  }
-};
-
 use {
+  kon_tokens::token_path,
   poise::{
     CreateReply,
     serenity_prelude::builder::CreateEmbed
@@ -17,7 +9,13 @@ use {
   tokio::join
 };
 
-async fn pms_serverstatus(url: &str) -> Result<Vec<(String, Vec<Value>)>, Error> {
+use kon_libs::{
+  BINARY_PROPERTIES,
+  HttpClient,
+  KonResult
+};
+
+async fn pms_serverstatus(url: &str) -> KonResult<Vec<(String, Vec<Value>)>> {
   let client = HttpClient::new();
   let req = client.get(url, "PMS-Status").await?;
 
@@ -66,7 +64,7 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
   for (title, servers) in server_map {
     let servers_str = servers
       .iter()
-      .map(|(name, status)| format!("{}: {}", name, status))
+      .map(|(name, status)| format!("{name}: {status}"))
       .collect::<Vec<String>>()
       .join("\n");
     statuses.push((title, servers_str, true));
@@ -76,11 +74,11 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
 
 /// Query the server statuses
 #[poise::command(slash_command, subcommands("wg"))]
-pub async fn status(_: super::PoiseCtx<'_>) -> Result<(), Error> { Ok(()) }
+pub async fn status(_: super::PoiseCtx<'_>) -> KonResult<()> { Ok(()) }
 
 /// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
-pub async fn wg(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
+pub async fn wg(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   let pms_asia = token_path().await.wg_pms;
   let pms_eu = pms_asia.replace("asia", "eu");
   let embed = CreateEmbed::new().color(BINARY_PROPERTIES.embed_color);

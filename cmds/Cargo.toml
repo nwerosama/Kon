@@ -1,0 +1,16 @@
+[package]
+name = "kon_cmds"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+kon_libs = { workspace = true }
+kon_tokens = { workspace = true }
+poise = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sysinfo = { workspace = true }
+tokio = { workspace = true }
+uptime_lib = { workspace = true }

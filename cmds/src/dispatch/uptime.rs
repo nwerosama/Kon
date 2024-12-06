@@ -1,14 +1,14 @@
-use crate::{
-  Error,
+use kon_libs::{
   GIT_COMMIT_BRANCH,
-  GIT_COMMIT_HASH,
-  internals::utils::{
-    BOT_VERSION,
-    format_duration
-  }
+  GIT_COMMIT_HASH
 };
 
 use {
+  kon_libs::{
+    BOT_VERSION,
+    KonResult,
+    format_duration
+  },
   std::{
     fs::File,
     io::{
@@ -47,8 +47,8 @@ fn get_os_info() -> String {
 
 /// Retrieve host and bot uptimes
 #[poise::command(slash_command)]
-pub async fn uptime(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
-  let _bot = ctx.http().get_current_user().await.unwrap();
+pub async fn uptime(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
+  let bot = ctx.http().get_current_user().await.unwrap();
   let mut sys = System::new_all();
   sys.refresh_all();
 
@@ -68,7 +68,7 @@ pub async fn uptime(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
   }
 
   let stat_msg = [
-    format!("**{} {}** `{GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH}`", _bot.name, BOT_VERSION.as_str()),
+    format!("**{} {}** `{GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH}`", bot.name, BOT_VERSION.as_str()),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
     format!("Process: `{}`", format_duration(proc_uptime)),
     format!("CPU: `{}`", cpu[0].brand()),

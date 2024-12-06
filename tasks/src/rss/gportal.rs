@@ -1,20 +1,18 @@
-use {
-  super::{
-    super::task_err,
-    IncidentColorMap,
-    REDIS_EXPIRY_SECS,
-    embed,
-    fetch_feed,
-    format_html_to_discord,
-    get_redis,
-    parse,
-    save_to_redis,
-    trim_old_content
-  },
-  crate::Error
+use super::{
+  super::task_err,
+  IncidentColorMap,
+  REDIS_EXPIRY_SECS,
+  embed,
+  fetch_feed,
+  format_html_to_discord,
+  get_redis,
+  parse,
+  save_to_redis,
+  trim_old_content
 };
 
 use {
+  kon_libs::KonResult,
   poise::serenity_prelude::{
     CreateEmbed,
     Timestamp
@@ -23,7 +21,7 @@ use {
   std::io::Cursor
 };
 
-pub async fn gportal_embed() -> Result<Option<CreateEmbed>, Error> {
+pub async fn gportal_embed() -> KonResult<Option<CreateEmbed>> {
   let redis = get_redis().await;
   let rkey = "RSS_GPortal";
   let rkey_content = format!("{}_Content", rkey);

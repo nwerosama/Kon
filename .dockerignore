@@ -7,3 +7,5 @@ docker-compose.yml
 Dockerfile
 renovate.json
 run.sh
+target/debug/
+target/release/

@@ -1,0 +1,12 @@
+[package]
+name = "kon_libs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cargo_toml = { workspace = true }
+poise = { workspace = true }
+reqwest = { workspace = true }
+
+[features]
+production = []

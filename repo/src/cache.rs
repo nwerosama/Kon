@@ -1,4 +1,4 @@
-use crate::internals::utils::token_path;
+use kon_tokens::token_path;
 
 use {
   bb8_redis::{

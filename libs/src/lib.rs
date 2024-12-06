@@ -1,27 +1,39 @@
+mod config;
+pub use config::BINARY_PROPERTIES;
+
+mod types;
+pub use types::*;
+
+mod data;
+pub use data::KonData;
+
+mod http;
+pub use http::HttpClient;
+
 use {
-  super::tsclient::TSClient,
+  cargo_toml::Manifest,
   poise::serenity_prelude::UserId,
-  std::sync::LazyLock,
-  tokenservice_client::TokenServiceApi,
-  tokio::sync::Mutex
+  std::sync::LazyLock
 };
 
+#[cfg(feature = "production")]
+pub static GIT_COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
+pub static GIT_COMMIT_BRANCH: &str = env!("GIT_COMMIT_BRANCH");
+
+#[cfg(not(feature = "production"))]
+pub static GIT_COMMIT_HASH: &str = "devel";
+
 pub static BOT_VERSION: LazyLock<String> = LazyLock::new(|| {
-  let cargo_version = cargo_toml::Manifest::from_str(include_str!("../../Cargo.toml"))
+  Manifest::from_str(include_str!("../../Cargo.toml"))
     .unwrap()
     .package
     .unwrap()
     .version
-    .unwrap();
-  format!("v{cargo_version}")
+    .unwrap()
 });
 
-static TSCLIENT: LazyLock<Mutex<TSClient>> = LazyLock::new(|| Mutex::new(TSClient::new()));
-
-pub async fn token_path() -> TokenServiceApi { TSCLIENT.lock().await.get().await.unwrap() }
-
-pub fn mention_dev(ctx: poise::Context<'_, (), crate::Error>) -> Option<String> {
-  let devs = super::config::BINARY_PROPERTIES.developers.clone();
+pub fn mention_dev(ctx: PoiseCtx<'_>) -> Option<String> {
+  let devs = BINARY_PROPERTIES.developers.clone();
   let app_owners = ctx.framework().options().owners.clone();
 
   let mut mentions = Vec::new();
@@ -57,7 +69,7 @@ pub fn format_duration(secs: u64) -> String {
 }
 
 pub fn format_bytes(bytes: u64) -> String {
-  let units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let units = ["B", "KB", "MB", "GB"];
   let mut value = bytes as f64;
   let mut unit = units[0];
 

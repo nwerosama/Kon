@@ -1,21 +1,19 @@
-use {
-  super::{
-    REDIS_EXPIRY_SECS,
-    fetch_feed,
-    get_redis,
-    parse,
-    save_to_redis,
-    task_err
-  },
-  crate::Error
+use super::{
+  REDIS_EXPIRY_SECS,
+  fetch_feed,
+  get_redis,
+  parse,
+  save_to_redis,
+  task_err
 };
 
 use {
+  kon_libs::KonResult,
   regex::Regex,
   std::io::Cursor
 };
 
-pub async fn rust_message() -> Result<Option<String>, Error> {
+pub async fn rust_message() -> KonResult<Option<String>> {
   let redis = get_redis().await;
   let rkey = "RSS_RustBlog";
   let url = "https://blog.rust-lang.org/feed.xml";

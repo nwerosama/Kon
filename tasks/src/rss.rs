@@ -5,23 +5,18 @@ mod github;
 mod gportal;
 mod rust;
 
-use {
-  super::{
-    super::{
-      config::BINARY_PROPERTIES,
-      http::HttpClient
-    },
-    task_err,
-    task_info
-  },
-  crate::{
-    Error,
-    controllers::cache::RedisController
-  }
+use super::{
+  task_err,
+  task_info
 };
 
 use {
   feed_rs::parser::parse,
+  kon_libs::{
+    HttpClient,
+    KonResult
+  },
+  kon_repo::RedisController,
   once_cell::sync::OnceCell,
   poise::serenity_prelude::{
     Context,
@@ -82,7 +77,7 @@ fn format_html_to_discord(input: String) -> String {
   output
 }
 
-async fn fetch_feed(url: &str) -> Result<Response, Error> {
+async fn fetch_feed(url: &str) -> KonResult<Response> {
   let http = HttpClient::new();
   let res = match http.get(url, "RSS-Monitor").await {
     Ok(res) => res,
@@ -95,7 +90,7 @@ async fn fetch_feed(url: &str) -> Result<Response, Error> {
 async fn save_to_redis(
   key: &str,
   value: &str
-) -> Result<(), Error> {
+) -> KonResult<()> {
   let redis = get_redis().await;
   redis.set(key, value).await.unwrap();
   if let Err(y) = redis.expire(key, REDIS_EXPIRY_SECS).await {
@@ -148,7 +143,7 @@ impl IncidentColorMap {
   }
 }
 
-pub async fn rss(ctx: Arc<Context>) -> Result<(), Error> {
+pub async fn rss(ctx: Arc<Context>) -> KonResult<()> {
   #[cfg(feature = "production")]
   let mut interval = interval(Duration::from_secs(300)); // Check feeds every 5 mins
   #[cfg(not(feature = "production"))]

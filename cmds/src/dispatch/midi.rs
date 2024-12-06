@@ -1,12 +1,10 @@
-use crate::{
-  Error,
-  internals::utils::{
+use {
+  kon_libs::{
+    KonError,
+    KonResult,
     format_bytes,
     mention_dev
-  }
-};
-
-use {
+  },
   poise::{
     CreateReply,
     serenity_prelude::CreateAttachment
@@ -31,7 +29,7 @@ use {
 pub async fn midi_to_wav(
   ctx: super::PoiseCtx<'_>,
   #[description = "MIDI file to be converted"] message: poise::serenity_prelude::Message
-) -> Result<(), Error> {
+) -> KonResult<()> {
   let re = Regex::new(r"(?i)\.mid$").unwrap();
 
   if !message.embeds.is_empty() || message.attachments.is_empty() || !re.is_match(&message.attachments[0].filename) {
@@ -52,7 +50,7 @@ pub async fn midi_to_wav(
         .await
         .unwrap();
 
-      return Err(Error::from(format!("Failed to download the file: {y}")))
+      return Err(KonError::from(format!("Failed to download the file: {y}")))
     }
   };
 
@@ -62,14 +60,14 @@ pub async fn midi_to_wav(
   let wav_path = re.replace(midi_path, ".wav");
 
   let sf2_path = "/tmp/FluidR3_GM.sf2";
-  write(sf2_path, include_bytes!("../internals/assets/FluidR3_GM.sf2"))?;
+  write(sf2_path, include_bytes!("../../../libs/assets/FluidR3_GM.sf2"))?;
 
   let output = std::process::Command::new("fluidsynth")
     .args(["-ni", sf2_path, midi_path, "-F", &wav_path])
     .output();
 
   // Just to add an info to console to tell what the bot is doing when MIDI file is downloaded.
-  println!("Discord[{}]: Processing MIDI file: \"{}\"", ctx.command().qualified_name, midi_path);
+  println!("Discord[{}]: Processing MIDI file: \"{midi_path}\"", ctx.command().qualified_name);
 
   match output {
     Ok(_) => {
@@ -102,7 +100,7 @@ pub async fn midi_to_wav(
         .await
         .unwrap();
 
-      return Err(Error::from(format!("Midi conversion failed: {y}")))
+      return Err(KonError::from(format!("Midi conversion failed: {y}")))
     }
   }
 

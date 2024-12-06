@@ -1,17 +1,15 @@
-use {
-  super::{
-    super::task_err,
-    REDIS_EXPIRY_SECS,
-    fetch_feed,
-    format_href_to_discord,
-    get_redis,
-    parse,
-    save_to_redis
-  },
-  crate::Error
+use super::{
+  super::task_err,
+  REDIS_EXPIRY_SECS,
+  fetch_feed,
+  format_href_to_discord,
+  get_redis,
+  parse,
+  save_to_redis
 };
 
 use {
+  kon_libs::KonResult,
   poise::serenity_prelude::{
     CreateEmbed,
     CreateEmbedAuthor,
@@ -21,7 +19,7 @@ use {
   std::io::Cursor
 };
 
-pub async fn esxi_embed() -> Result<Option<CreateEmbed>, Error> {
+pub async fn esxi_embed() -> KonResult<Option<CreateEmbed>> {
   let redis = get_redis().await;
   let rkey = "RSS_ESXi";
   let url = "https://esxi-patches.v-front.de/atom/ESXi-7.0.0.xml";

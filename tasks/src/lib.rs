@@ -3,6 +3,7 @@ mod rss;
 pub use rss::rss;
 
 use {
+  kon_libs::KonResult,
   poise::serenity_prelude::Context,
   std::{
     future::Future,
@@ -38,7 +39,7 @@ pub async fn run_task<F, T>(
   task: F
 ) where
   F: Fn(Arc<Context>) -> T + Send + 'static,
-  T: Future<Output = Result<(), crate::Error>> + Send + 'static
+  T: Future<Output = KonResult<()>> + Send + 'static
 {
   let ctx_cl = Arc::clone(&ctx);
 

@@ -11,6 +11,10 @@ const ERROR_PREFIX: &str = "HTTPClient[Error]:";
 
 pub struct HttpClient(Client);
 
+impl Default for HttpClient {
+  fn default() -> Self { Self::new() }
+}
+
 impl HttpClient {
   pub fn new() -> Self { Self(Client::new()) }
 
@@ -24,7 +28,7 @@ impl HttpClient {
       .get(url)
       .header(
         reqwest::header::USER_AGENT,
-        format!("Kon ({}-{}) - {ua}/reqwest", super::utils::BOT_VERSION.as_str(), crate::GIT_COMMIT_HASH)
+        format!("Kon ({}-{}) - {ua}/reqwest", crate::BOT_VERSION.as_str(), crate::GIT_COMMIT_HASH)
       )
       .timeout(Duration::from_secs(30))
       .send()

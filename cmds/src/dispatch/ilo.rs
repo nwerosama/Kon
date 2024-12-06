@@ -1,12 +1,9 @@
-use crate::{
-  Error,
-  internals::{
-    config::BINARY_PROPERTIES,
-    utils::token_path
-  }
-};
-
 use {
+  kon_libs::{
+    BINARY_PROPERTIES,
+    KonResult
+  },
+  kon_tokens::token_path,
   poise::{
     CreateReply,
     serenity_prelude::{
@@ -190,11 +187,11 @@ async fn ilo_data(endpoint: RedfishEndpoint) -> Result<Box<dyn std::any::Any + S
   interaction_context = "Guild|BotDm|PrivateChannel",
   subcommands("temperature", "power", "system")
 )]
-pub async fn ilo(_: super::PoiseCtx<'_>) -> Result<(), Error> { Ok(()) }
+pub async fn ilo(_: super::PoiseCtx<'_>) -> KonResult<()> { Ok(()) }
 
 /// Retrieve the server's temperature data
 #[poise::command(slash_command)]
-pub async fn temperature(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
+pub async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
   let ilo = ilo_data(RedfishEndpoint::Thermal).await.unwrap();
   let data = ilo.downcast_ref::<Chassis>().unwrap();
@@ -242,7 +239,7 @@ pub async fn temperature(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
 
 /// Retrieve the server's power data
 #[poise::command(slash_command)]
-pub async fn power(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
+pub async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
   let ilo = ilo_data(RedfishEndpoint::Power).await.unwrap();
   let data = ilo.downcast_ref::<Power>().unwrap();
@@ -272,7 +269,7 @@ pub async fn power(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
 
 /// Retrieve the server's system data
 #[poise::command(slash_command)]
-pub async fn system(ctx: super::PoiseCtx<'_>) -> Result<(), Error> {
+pub async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
 
   let (ilo_sys, ilo_event) = tokio::join!(ilo_data(RedfishEndpoint::System), ilo_data(RedfishEndpoint::EventService));

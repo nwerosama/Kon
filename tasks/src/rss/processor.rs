@@ -1,5 +1,9 @@
-use super::{
+use kon_libs::{
   BINARY_PROPERTIES,
+  KonResult
+};
+
+use super::{
   TASK_NAME,
   esxi::esxi_embed,
   get_redis,
@@ -36,7 +40,7 @@ async fn process_embed(
   embed: Option<CreateEmbed>,
   redis_key: &str,
   content_key: &str
-) -> Result<(), crate::Error> {
+) -> KonResult<()> {
   if let Some(embed) = embed {
     let redis = get_redis().await;
     let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);

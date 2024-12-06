@@ -1,0 +1,17 @@
+[package]
+name = "kon_tasks"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+feed-rs = { workspace = true }
+kon_libs = { workspace = true }
+kon_repo = { workspace = true }
+once_cell = { workspace = true }
+poise = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+production = ["kon_libs/production"]
