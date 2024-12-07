@@ -46,7 +46,7 @@ fn get_os_info() -> String {
 }
 
 /// Retrieve host and bot uptimes
-#[poise::command(slash_command)]
+#[poise::command(slash_command, install_context = "Guild|User", interaction_context = "Guild|BotDm|PrivateChannel")]
 pub async fn uptime(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   let bot = ctx.http().get_current_user().await.unwrap();
   let mut sys = System::new_all();

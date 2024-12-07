@@ -7,7 +7,10 @@ use {
   },
   poise::{
     CreateReply,
-    serenity_prelude::CreateAttachment
+    serenity_prelude::{
+      CreateAttachment,
+      Message
+    }
   },
   regex::Regex,
   std::{
@@ -23,12 +26,12 @@ use {
 /// Convert MIDI file to WAV
 #[poise::command(
   context_menu_command = "MIDI -> WAV",
-  install_context = "User",
+  install_context = "Guild|User",
   interaction_context = "Guild|BotDm|PrivateChannel"
 )]
 pub async fn midi_to_wav(
   ctx: super::PoiseCtx<'_>,
-  #[description = "MIDI file to be converted"] message: poise::serenity_prelude::Message
+  #[description = "MIDI file to be converted"] message: Message
 ) -> KonResult<()> {
   let re = Regex::new(r"(?i)\.mid$").unwrap();
 
@@ -87,9 +90,12 @@ pub async fn midi_to_wav(
             &*wav_path,
             format_bytes(metadata(&*wav_path).unwrap().size())
           )))
-          .await
-          .unwrap();
+          .await?;
       } else if reply.is_ok() {
+        println!(
+          "Discord[{}]: Processed file uploaded back to Discord channel",
+          ctx.command().qualified_name
+        );
         remove_file(midi_path)?;
         remove_file(&*wav_path)?;
       }
@@ -97,8 +103,7 @@ pub async fn midi_to_wav(
     Err(y) => {
       ctx
         .send(CreateReply::default().content("Command didn't execute successfully, check console for more information!"))
-        .await
-        .unwrap();
+        .await?;
 
       return Err(KonError::from(format!("Midi conversion failed: {y}")))
     }

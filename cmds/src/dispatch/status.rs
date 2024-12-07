@@ -73,7 +73,12 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
 }
 
 /// Query the server statuses
-#[poise::command(slash_command, subcommands("wg"))]
+#[poise::command(
+  slash_command,
+  install_context = "Guild|User",
+  interaction_context = "Guild|BotDm|PrivateChannel",
+  subcommands("wg")
+)]
 pub async fn status(_: super::PoiseCtx<'_>) -> KonResult<()> { Ok(()) }
 
 /// Retrieve the server statuses from Wargaming
