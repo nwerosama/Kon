@@ -4,13 +4,10 @@ use kon_libs::{
 };
 
 use super::{
+  RSSFeedBox,
+  RSSFeedOutput,
   TASK_NAME,
-  esxi::esxi_embed,
-  get_redis,
-  github::github_embed,
-  gportal::gportal_embed,
-  rust::rust_message,
-  task_err
+  get_redis
 };
 
 use {
@@ -19,9 +16,11 @@ use {
     Context,
     CreateEmbed,
     CreateMessage,
-    EditMessage
+    EditMessage,
+    Http
   },
   regex::Regex,
+  std::sync::Arc,
   tokio::time::{
     Duration,
     sleep
@@ -32,29 +31,52 @@ use {
 /* std::fs::File::create("rss_name.log").unwrap();
 std::fs::write("rss_name.log", format!("{:#?}", feed))?; */
 
-// todo; have a reusable function for feeding RSS data and building the embed out of it.
-//       see github.rs / esxi.rs / gportal.rs for references of this idea.
+async fn process_regular_embed(
+  http: &Http,
+  embed: CreateEmbed,
+  redis_key: &str
+) -> KonResult<()> {
+  let redis = get_redis().await;
+  let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
 
-async fn process_embed(
-  ctx: &Context,
-  embed: Option<CreateEmbed>,
+  let msg_id_key: Option<String> = redis.get(redis_key).await?;
+
+  if let Some(msg_id_key) = msg_id_key {
+    if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+      if let Ok(mut message) = channel.message(http, msg_id).await {
+        message.edit(http, EditMessage::new().embed(embed)).await?;
+      }
+    }
+  } else {
+    let message = channel.send_message(http, CreateMessage::new().add_embed(embed)).await?;
+    redis.set(redis_key, &message.id.to_string()).await?;
+    redis.expire(redis_key, 36000).await?;
+  }
+
+  Ok(())
+}
+
+/// Cache-based embed updater for ongoing outages/incidents
+async fn process_incident_embed(
+  http: &Http,
+  embed: CreateEmbed,
   redis_key: &str,
   content_key: &str
 ) -> KonResult<()> {
-  if let Some(embed) = embed {
-    let redis = get_redis().await;
-    let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
+  let redis = get_redis().await;
+  let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
 
-    let msg_id_key: Option<String> = redis.get(redis_key).await?;
-    let cached_content: Option<String> = redis.get(content_key).await.unwrap_or(None);
+  let msg_id_key: Option<String> = redis.get(redis_key).await?;
+  let cached_content: Option<String> = redis.get(content_key).await.unwrap_or(None);
 
-    if let Some(msg_id_key) = msg_id_key {
-      if let Ok(msg_id) = msg_id_key.parse::<u64>() {
-        if let Ok(mut message) = channel.message(&ctx.http, msg_id).await {
-          let new_description = message.embeds[0].description.clone().unwrap();
+  if let Some(msg_id_key) = msg_id_key {
+    if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+      if let Ok(mut message) = channel.message(http, msg_id).await {
+        if let Some(existing) = message.embeds.first() {
+          let new_description = existing.description.clone().unwrap();
 
           if cached_content.as_deref() != Some(&new_description) {
-            message.edit(&ctx.http, EditMessage::new().embed(embed)).await?;
+            message.edit(http, EditMessage::new().embed(embed)).await?;
           }
 
           sleep(Duration::from_secs(15)).await;
@@ -64,81 +86,94 @@ async fn process_embed(
           }
         }
       }
-    } else {
-      let message = channel.send_message(&ctx.http, CreateMessage::new().add_embed(embed)).await?;
-      redis.set(redis_key, &message.id.to_string()).await?;
-      redis.expire(redis_key, 36000).await?;
     }
+  } else {
+    let message = channel.send_message(http, CreateMessage::new().add_embed(embed)).await?;
+    redis.set(redis_key, &message.id.to_string()).await?;
+    redis.expire(redis_key, 36000).await?;
   }
 
   Ok(())
 }
 
-pub async fn feed_processor(ctx: &Context) {
-  let mut log_msgs: Vec<String> = Vec::new();
+/// Process the content string
+async fn process_msg_content(
+  http: &Http,
+  content: String,
+  redis_key: &str
+) -> KonResult<()> {
+  let redis = get_redis().await;
+  let channel = ChannelId::new(BINARY_PROPERTIES.rss_channel);
 
-  match esxi_embed().await {
-    Ok(Some(embed)) => {
-      ChannelId::new(BINARY_PROPERTIES.rss_channel)
-        .send_message(&ctx.http, CreateMessage::new().add_embed(embed))
-        .await
-        .unwrap();
-    },
-    Ok(None) => (),
-    Err(y) => {
-      log_msgs.push(format!(
-        "**[{TASK_NAME}:ESXi:Error]:** Feed failed with the following error:```\n{}\n```",
-        y
-      ));
-      task_err(TASK_NAME, &y.to_string())
+  let msg_id_key: Option<String> = redis.get(redis_key).await?;
+
+  if let Some(msg_id_key) = msg_id_key {
+    if let Ok(msg_id) = msg_id_key.parse::<u64>() {
+      channel.edit_message(http, msg_id, EditMessage::new().content(content)).await?;
     }
+  } else {
+    let message = channel.send_message(http, CreateMessage::new().content(content)).await?;
+    redis.set(redis_key, &message.id.to_string()).await?;
+    redis.expire(redis_key, 36000).await?;
   }
 
-  match gportal_embed().await {
-    Ok(Some(embed)) => process_embed(ctx, Some(embed), "RSS_GPortal_MsgID", "RSS_GPortal_Content").await.unwrap(),
-    Ok(None) => (),
-    Err(y) => {
-      log_msgs.push(format!(
-        "**[{TASK_NAME}:GPortal:Error]:** Feed failed with the following error:```\n{}\n```",
-        y
-      ));
-      task_err(TASK_NAME, &y.to_string())
-    }
+  Ok(())
+}
+
+pub struct RSSProcessor {
+  pub feeds: Vec<RSSFeedBox>
+}
+
+impl RSSProcessor {
+  pub fn new() -> Self { Self { feeds: Vec::new() } }
+
+  pub fn add_feed(
+    &mut self,
+    feed: RSSFeedBox
+  ) {
+    self.feeds.push(feed);
   }
 
-  match github_embed().await {
-    Ok(Some(embed)) => process_embed(ctx, Some(embed), "RSS_GitHub_MsgID", "RSS_GitHub_Content").await.unwrap(),
-    Ok(None) => (),
-    Err(y) => {
-      log_msgs.push(format!(
-        "**[{TASK_NAME}:GitHub:Error]:** Feed failed with the following error:```\n{}\n```",
-        y
-      ));
-      task_err(TASK_NAME, &y.to_string())
-    }
-  }
+  pub async fn process_all(
+    &self,
+    ctx: Arc<Context>
+  ) -> KonResult<()> {
+    let mut discord_msg: Vec<String> = Vec::new();
 
-  match rust_message().await {
-    Ok(Some(content)) => {
-      ChannelId::new(BINARY_PROPERTIES.rss_channel)
-        .send_message(&ctx.http, CreateMessage::new().content(content))
-        .await
-        .unwrap();
-    },
-    Ok(None) => (),
-    Err(y) => {
-      log_msgs.push(format!(
-        "**[{TASK_NAME}:RustBlog:Error]:** Feed failed with the following error:```\n{}\n```",
-        y
-      ));
-      task_err(TASK_NAME, &y.to_string())
-    }
-  }
+    for feed in &self.feeds {
+      let feed_name = feed.name();
+      let redis_key = format!("RSS_{feed_name}_MsgId");
+      let error_msg = format!("**[{TASK_NAME}:{feed_name}:Error]:** Feed failed with the following error:```\n{{ error }}\n```");
 
-  if !log_msgs.is_empty() {
-    ChannelId::new(BINARY_PROPERTIES.kon_logs)
-      .send_message(&ctx.http, CreateMessage::new().content(log_msgs.join("\n")))
-      .await
-      .unwrap();
+      match feed.process(ctx.clone()).await {
+        Ok(Some(output)) => match output {
+          RSSFeedOutput::RegularEmbed(embed) => {
+            if let Err(e) = process_regular_embed(&ctx.http, embed, &redis_key).await {
+              discord_msg.push(error_msg.replace("{{ error }}", &e.to_string()))
+            }
+          },
+          RSSFeedOutput::IncidentEmbed(embed) => {
+            if let Err(e) = process_incident_embed(&ctx.http, embed, &redis_key, &format!("RSS_{feed_name}_Content")).await {
+              discord_msg.push(error_msg.replace("{{ error }}", &e.to_string()))
+            }
+          },
+          RSSFeedOutput::Content(content) => {
+            if let Err(e) = process_msg_content(&ctx.http, content, &redis_key).await {
+              discord_msg.push(error_msg.replace("{{ error }}", &e.to_string()))
+            }
+          },
+        },
+        Ok(None) => (),
+        Err(e) => discord_msg.push(error_msg.replace("{{ error }}", &e.to_string()))
+      }
+    }
+
+    if !discord_msg.is_empty() {
+      ChannelId::new(BINARY_PROPERTIES.kon_logs)
+        .send_message(&ctx.http, CreateMessage::new().content(discord_msg.join("\n")))
+        .await?;
+    }
+
+    Ok(())
   }
 }

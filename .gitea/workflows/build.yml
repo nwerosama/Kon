@@ -9,11 +9,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  RUNNER_TOOL_CACHE: /toolcache
+
 jobs:
   build:
     runs-on: ubuntu-22.04
-    env:
-      RUNNER_TOOL_CACHE: /toolcache
 
     steps:
       - name: Set up Docker Buildx
@@ -42,7 +44,8 @@ jobs:
             $HOME/.cargo/registry/index/
             $HOME/.cargo/registry/cache/
             target/
-          key: ${{ runner.os }}-cache-${{ steps.cargo-cache-key.outputs.hash }}
+          key: ${{ runner.os }}-cargo-${{ steps.cargo-cache-key.outputs.hash }}
+          restore-keys: ${{ runner.os }}-cargo-
 
       - name: Login to Gitea
         uses: docker/login-action@v3
@@ -65,7 +68,6 @@ jobs:
         run: |
           rustup target add x86_64-unknown-linux-musl
           export GIT_COMMIT_HASH=${{ github.sha }} && \
-          export GIT_COMMIT_BRANCH=${{ github.ref_name }} && \
           cargo zigbuild --target x86_64-unknown-linux-musl --locked -rF production
 
       - name: Build and push image
@@ -84,7 +86,7 @@ jobs:
     needs: build
     steps:
       - name: Deploy update
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}

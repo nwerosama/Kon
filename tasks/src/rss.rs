@@ -5,6 +5,13 @@ mod github;
 mod gportal;
 mod rust;
 
+use {
+  esxi::Esxi,
+  github::GitHub,
+  gportal::GPortal,
+  rust::RustBlog
+};
+
 use super::{
   task_err,
   task_info
@@ -21,7 +28,8 @@ use {
   poise::serenity_prelude::{
     Context,
     CreateEmbed,
-    Timestamp
+    Timestamp,
+    async_trait
   },
   regex::Regex,
   reqwest::Response,
@@ -31,6 +39,8 @@ use {
     interval
   }
 };
+
+pub type RSSFeedBox = Box<dyn RSSFeed + Send + Sync>;
 
 const TASK_NAME: &str = "RSS";
 static REDIS_EXPIRY_SECS: i64 = 7200;
@@ -94,7 +104,7 @@ async fn save_to_redis(
   let redis = get_redis().await;
   redis.set(key, value).await.unwrap();
   if let Err(y) = redis.expire(key, REDIS_EXPIRY_SECS).await {
-    task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
+    task_err("RSS", format!("[RedisExpiry]: {y}").as_str());
   }
   Ok(())
 }
@@ -143,6 +153,23 @@ impl IncidentColorMap {
   }
 }
 
+#[async_trait]
+pub trait RSSFeed {
+  fn name(&self) -> &str;
+  fn url(&self) -> &str;
+  async fn process(
+    &self,
+    ctx: Arc<Context>
+  ) -> KonResult<Option<RSSFeedOutput>>;
+}
+
+/// Handle feed's output type for Discord message
+pub enum RSSFeedOutput {
+  RegularEmbed(CreateEmbed),
+  IncidentEmbed(CreateEmbed),
+  Content(String)
+}
+
 pub async fn rss(ctx: Arc<Context>) -> KonResult<()> {
   #[cfg(feature = "production")]
   let mut interval = interval(Duration::from_secs(300)); // Check feeds every 5 mins
@@ -151,6 +178,19 @@ pub async fn rss(ctx: Arc<Context>) -> KonResult<()> {
   let mut first_run = true;
   task_info(TASK_NAME, "Task loaded!");
 
+  let feeds: Vec<RSSFeedBox> = vec![
+    Box::new(Esxi::new("https://esxi-patches.v-front.de/atom/ESXi-7.0.0.xml".to_string())),
+    Box::new(GitHub::new("https://www.githubstatus.com/history.atom".to_string())),
+    Box::new(GPortal::new("https://status.g-portal.com/history.atom".to_string())),
+    Box::new(RustBlog::new("https://blog.rust-lang.org/feed.xml".to_string())),
+  ];
+
+  let mut processor = processor::RSSProcessor::new();
+
+  for feed in feeds {
+    processor.add_feed(feed);
+  }
+
   loop {
     interval.tick().await;
 
@@ -158,6 +198,9 @@ pub async fn rss(ctx: Arc<Context>) -> KonResult<()> {
       task_info(&format!("{TASK_NAME}:Processor"), "Starting up!");
       first_run = false;
     }
-    processor::feed_processor(&ctx).await;
+
+    if let Err(e) = processor.process_all(ctx.clone()).await {
+      task_err(&format!("{TASK_NAME}:Processor"), &e.to_string());
+    }
   }
 }

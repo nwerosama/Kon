@@ -1,88 +1,115 @@
 use super::{
-  super::task_err,
-  REDIS_EXPIRY_SECS,
+  RSSFeed,
+  RSSFeedOutput,
   fetch_feed,
   format_href_to_discord,
   get_redis,
   parse,
-  save_to_redis
+  save_to_redis,
+  task_err
 };
 
 use {
   kon_libs::KonResult,
   poise::serenity_prelude::{
+    Context,
     CreateEmbed,
     CreateEmbedAuthor,
-    Timestamp
+    Timestamp,
+    async_trait
   },
   regex::Regex,
-  std::io::Cursor
+  std::{
+    io::Cursor,
+    sync::Arc
+  }
 };
 
-pub async fn esxi_embed() -> KonResult<Option<CreateEmbed>> {
-  let redis = get_redis().await;
-  let rkey = "RSS_ESXi";
-  let url = "https://esxi-patches.v-front.de/atom/ESXi-7.0.0.xml";
+pub struct Esxi {
+  url: String
+}
 
-  let res = fetch_feed(url).await?;
-  let data = res.text().await?;
-  let cursor = Cursor::new(data);
+impl Esxi {
+  pub fn new(url: String) -> Self { Self { url } }
+}
 
-  let feed = parse(cursor).unwrap();
-  let home_page = feed.links[0].clone().href;
-  let article = feed.entries[0].clone();
+#[async_trait]
+impl RSSFeed for Esxi {
+  fn name(&self) -> &str { "ESXi" }
 
-  fn get_patch_version(input: &str) -> Option<String> {
-    let re = Regex::new(r#"(?i)Update\s+([0-9]+)([a-z]?)"#).unwrap();
+  fn url(&self) -> &str { self.url.as_str() }
 
-    if let Some(caps) = re.captures(input) {
-      let update_num = caps[1].to_string();
-      let letter = caps.get(2).map_or("", |m| m.as_str());
-      Some(format!("Update {}{}", update_num, letter))
-    } else {
-      None
+  async fn process(
+    &self,
+    _ctx: Arc<Context>
+  ) -> KonResult<Option<RSSFeedOutput>> {
+    let redis = get_redis().await;
+    let rkey = "RSS_ESXi";
+
+    let res = fetch_feed(self.url()).await?;
+    let data = res.text().await?;
+    let cursor = Cursor::new(data);
+
+    let feed = parse(cursor).map_err(|e| {
+      task_err("RSS:ESXi", &format!("Error parsing RSS feed: {e}"));
+      e
+    })?;
+
+    if feed.entries.is_empty() {
+      task_err("RSS:ESXi", "No entries found in the feed!");
+      return Ok(None);
     }
-  }
 
-  let cached_patch = redis.get(rkey).await.unwrap().unwrap_or_default();
+    let home_page = feed.links[0].clone().href;
+    let article = feed.entries[0].clone();
 
-  if cached_patch.is_empty() {
-    redis.set(rkey, &article.categories[3].term).await.unwrap();
-    if let Err(y) = redis.expire(rkey, REDIS_EXPIRY_SECS).await {
-      task_err("RSS", format!("[RedisExpiry]: {}", y).as_str());
+    fn get_patch_version(input: &str) -> Option<String> {
+      let re = Regex::new(r#"(?i)Update\s+([0-9]+)([a-z]?)"#).unwrap();
+
+      if let Some(caps) = re.captures(input) {
+        let update_num = caps[1].to_string();
+        let letter = caps.get(2).map_or("", |m| m.as_str());
+        Some(format!("Update {update_num}{letter}"))
+      } else {
+        None
+      }
     }
-    return Ok(None);
-  }
 
-  if let Some(patch) = get_patch_version(&article.categories[3].term) {
-    if patch == cached_patch {
-      Ok(None)
-    } else {
+    let cached_patch = redis.get(rkey).await.unwrap_or(None).unwrap_or_default();
+
+    if cached_patch.is_empty() {
       save_to_redis(rkey, &article.categories[3].term).await?;
-      Ok(Some(
-        CreateEmbed::new()
-          .color(0x4EFBCB)
-          .author(CreateEmbedAuthor::new(feed.title.unwrap().content).url(home_page))
-          .thumbnail(feed.logo.unwrap().uri)
-          .description(format!(
-            "{} {} for {} {} has been rolled out!\n{}",
-            article.categories[2].term,
-            article.categories[3].term,
-            article.categories[0].term,
-            article.categories[1].term,
-            format_href_to_discord(article.summary.unwrap().content.as_str())
-          ))
-          .timestamp(Timestamp::from(article.updated.unwrap()))
-      ))
+      return Ok(None);
     }
-  } else {
-    task_err(
-      "RSS:ESXi",
-      &format!(
-        "Article term does not match the expected RegEx pattern! ({})",
-        article.categories[3].term.as_str()
-      )
-    );
-    Ok(None)
+
+    if let Some(patch) = get_patch_version(&article.categories[3].term) {
+      if patch == cached_patch {
+        Ok(None)
+      } else {
+        save_to_redis(rkey, &article.categories[3].term).await?;
+
+        Ok(Some(RSSFeedOutput::RegularEmbed(
+          CreateEmbed::new()
+            .color(0x4EFBCB)
+            .author(CreateEmbedAuthor::new(feed.title.unwrap().content).url(home_page))
+            .thumbnail(feed.logo.unwrap().uri)
+            .description(format!(
+              "{} {} for {} {} has been rolled out!\n{}",
+              article.categories[2].term,
+              article.categories[3].term,
+              article.categories[0].term,
+              article.categories[1].term,
+              format_href_to_discord(&article.summary.unwrap().content)
+            ))
+            .timestamp(Timestamp::from(article.updated.unwrap()))
+        )))
+      }
+    } else {
+      task_err(
+        "RSS:ESXi",
+        &format!("Article term does not match the expected RegEx pattern! ({})", article.categories[3].term)
+      );
+      Ok(None)
+    }
   }
 }
