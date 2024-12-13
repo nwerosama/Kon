@@ -221,7 +221,7 @@ fn fmt_dt(input: &str) -> Option<String> {
     return None;
   }
 
-  let date = format!("{}/{}/{}", date_parts[1], date_parts[2], date_parts[0]);
+  let date = format!("{}/{}/{}", date_parts[2], date_parts[1], date_parts[0]);
   let time = parts[1].trim_end_matches('Z');
 
   Some(format!("{date} {time}"))
