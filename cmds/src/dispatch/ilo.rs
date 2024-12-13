@@ -4,6 +4,7 @@ use {
     KonResult
   },
   kon_tokens::token_path,
+  lazy_static::lazy_static,
   poise::{
     CreateReply,
     serenity_prelude::{
@@ -12,14 +13,22 @@ use {
     }
   },
   reqwest::{
+    Client,
     ClientBuilder,
     Error as ReqError
   },
   serde::{
     Deserialize,
-    Serialize
+    Serialize,
+    de::DeserializeOwned
   }
 };
+
+const ILO_HOSTNAME: &str = "POMNI";
+
+lazy_static! {
+  static ref REQWEST_CLIENT: Client = ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
+}
 
 #[derive(Serialize, Deserialize)]
 struct Chassis {
@@ -131,13 +140,29 @@ struct Event {
   status: Status
 }
 
-const ILO_HOSTNAME: &str = "POMNI";
+#[derive(Serialize, Deserialize)]
+/// HP calls this Integrated Management Log
+struct Iml {
+  #[serde(rename = "Items")]
+  items: Vec<ImlEntry>
+}
+
+#[derive(Serialize, Deserialize)]
+struct ImlEntry {
+  #[serde(rename = "Created")]
+  created:  String,
+  #[serde(rename = "Message")]
+  message:  String,
+  #[serde(rename = "Severity")]
+  severity: String
+}
 
 enum RedfishEndpoint {
   Thermal,
   Power,
   System,
-  EventService
+  EventService,
+  LogServices
 }
 
 impl RedfishEndpoint {
@@ -146,55 +171,76 @@ impl RedfishEndpoint {
       RedfishEndpoint::Thermal => "Chassis/1/Thermal".to_string(),
       RedfishEndpoint::Power => "Chassis/1/Power".to_string(),
       RedfishEndpoint::System => "Systems/1".to_string(),
-      RedfishEndpoint::EventService => "EventService".to_string()
+      RedfishEndpoint::EventService => "EventService".to_string(),
+      RedfishEndpoint::LogServices => "Systems/1/LogServices/IML/Entries".to_string()
     }
   }
 }
 
-async fn ilo_data(endpoint: RedfishEndpoint) -> Result<Box<dyn std::any::Any + Send>, ReqError> {
-  let client = ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
-  let res = client
-    .get(format!("https://{}/redfish/v1/{}", token_path().await.ilo_ip, endpoint.url()))
-    .basic_auth(token_path().await.ilo_user, Some(token_path().await.ilo_pw))
-    .send()
-    .await
-    .unwrap();
+async fn ilo_data<T: DeserializeOwned>(endpoint: RedfishEndpoint) -> Result<T, ReqError> {
+  let client = &*REQWEST_CLIENT;
+  let token = token_path().await;
+  let redfish_url = format!("https://{}/redfish/v1/{}", token.ilo_ip, endpoint.url());
 
-  match endpoint {
-    RedfishEndpoint::Thermal => {
-      let body: Chassis = res.json().await.unwrap();
-      Ok(Box::new(body))
-    },
-    RedfishEndpoint::Power => {
-      let body: Power = res.json().await.unwrap();
-      Ok(Box::new(body))
-    },
-    RedfishEndpoint::System => {
-      let body: System = res.json().await.unwrap();
-      Ok(Box::new(body))
-    },
-    RedfishEndpoint::EventService => {
-      let body: Event = res.json().await.unwrap();
-      Ok(Box::new(body))
-    }
-  }
+  let res = client.get(redfish_url).basic_auth(token.ilo_user, Some(token.ilo_pw)).send().await?;
+
+  res.json::<T>().await
 }
 
-/// Retrieve data from the HP iLO4 interface
+fn embed_builder(
+  title: &str,
+  description: Option<String>,
+  fields: Option<Vec<(String, String, bool)>>
+) -> CreateEmbed {
+  let mut embed = CreateEmbed::new()
+    .color(BINARY_PROPERTIES.embed_color)
+    .timestamp(Timestamp::now())
+    .title(format!("{ILO_HOSTNAME} - {title}"));
+
+  if let Some(d) = description {
+    embed = embed.description(d);
+  }
+
+  if let Some(f) = fields {
+    for (name, value, inline) in f {
+      embed = embed.field(name, value, inline);
+    }
+  }
+
+  embed
+}
+
+fn fmt_dt(input: &str) -> Option<String> {
+  let parts: Vec<&str> = input.split('T').collect();
+  if parts.len() != 2 {
+    return None;
+  }
+
+  let date_parts: Vec<&str> = parts[0].split('-').collect();
+  if date_parts.len() != 3 {
+    return None;
+  }
+
+  let date = format!("{}/{}/{}", date_parts[1], date_parts[2], date_parts[0]);
+  let time = parts[1].trim_end_matches('Z');
+
+  Some(format!("{date} {time}"))
+}
+
+/// Retrieve data from the HP iLO interface
 #[poise::command(
   slash_command,
   install_context = "Guild|User",
   interaction_context = "Guild|BotDm|PrivateChannel",
-  subcommands("temperature", "power", "system")
+  subcommands("temperature", "power", "system", "logs")
 )]
 pub async fn ilo(_: super::PoiseCtx<'_>) -> KonResult<()> { Ok(()) }
 
 /// Retrieve the server's temperature data
 #[poise::command(slash_command)]
-pub async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
+async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
-  let ilo = ilo_data(RedfishEndpoint::Thermal).await.unwrap();
-  let data = ilo.downcast_ref::<Chassis>().unwrap();
+  let data: Chassis = ilo_data(RedfishEndpoint::Thermal).await?;
   let mut tempdata = String::new();
   let mut fandata = String::new();
 
@@ -212,7 +258,7 @@ pub async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
       _ => "Unknown Sensor"
     };
 
-    tempdata.push_str(&format!("**{}:** `{}°C`\n", name, temp.reading_celsius));
+    tempdata.push_str(&format!("**{name}:** `{}°C`\n", temp.reading_celsius));
   }
   for fan in &data.fans {
     if fan.current_reading == 0 {
@@ -223,15 +269,11 @@ pub async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   }
 
   ctx
-    .send(
-      CreateReply::default().embed(
-        CreateEmbed::new()
-          .color(BINARY_PROPERTIES.embed_color)
-          .timestamp(Timestamp::now())
-          .title(format!("{} - Temperatures", ILO_HOSTNAME))
-          .fields(vec![("Temperatures", tempdata, false), ("Fans", fandata, false)])
-      )
-    )
+    .send(CreateReply::default().embed(embed_builder(
+      "Temperatures",
+      None,
+      Some(vec![("Temperatures".to_string(), tempdata, false), ("Fans".to_string(), fandata, false)])
+    )))
     .await?;
 
   Ok(())
@@ -239,10 +281,9 @@ pub async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
 
 /// Retrieve the server's power data
 #[poise::command(slash_command)]
-pub async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
+async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
-  let ilo = ilo_data(RedfishEndpoint::Power).await.unwrap();
-  let data = ilo.downcast_ref::<Power>().unwrap();
+  let data: Power = ilo_data(RedfishEndpoint::Power).await?;
 
   let mut powerdata = String::new();
 
@@ -253,15 +294,7 @@ pub async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   powerdata.push_str(&format!("**Min Consumed:** `{}w`", &data.power_metrics.min_consumed_watts));
 
   ctx
-    .send(
-      CreateReply::default().embed(
-        CreateEmbed::new()
-          .color(BINARY_PROPERTIES.embed_color)
-          .timestamp(Timestamp::now())
-          .title(format!("{} - Power", ILO_HOSTNAME))
-          .description(powerdata)
-      )
-    )
+    .send(CreateReply::default().embed(embed_builder("Power", Some(powerdata), None)))
     .await?;
 
   Ok(())
@@ -269,55 +302,67 @@ pub async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
 
 /// Retrieve the server's system data
 #[poise::command(slash_command)]
-pub async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
+async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
 
   let (ilo_sys, ilo_event) = tokio::join!(ilo_data(RedfishEndpoint::System), ilo_data(RedfishEndpoint::EventService));
 
-  let ilo_sys = ilo_sys.unwrap();
-  let ilo_event = ilo_event.unwrap();
-
-  let system_data = ilo_sys.downcast_ref::<System>().unwrap();
-  let event_data = ilo_event.downcast_ref::<Event>().unwrap();
+  let ilo_sys: System = ilo_sys.unwrap();
+  let ilo_event: Event = ilo_event.unwrap();
 
   let mut data = String::new();
 
-  let post_state = match system_data.oem.hp.post_state.as_str() {
+  let post_state = match ilo_sys.oem.hp.post_state.as_str() {
     "FinishedPost" => "Finished POST",
     "InPost" => "In POST (Booting)",
     "PowerOff" => "Powered off",
     _ => "Unknown State"
   };
-  if system_data.oem.hp.post_state != "FinishedPost" {
-    println!("iLO:PostState = {}", system_data.oem.hp.post_state);
+  if ilo_sys.oem.hp.post_state != "FinishedPost" {
+    println!("iLO:PostState = {}", ilo_sys.oem.hp.post_state);
   }
 
   data.push_str(&format!(
     "**Health:** `{}`\n",
-    event_data.status.health.as_ref().unwrap_or(&"Unknown".to_string())
+    ilo_event.status.health.as_ref().unwrap_or(&"Unknown".to_string())
   ));
-  data.push_str(&format!("**POST:** `{}`\n", post_state));
-  data.push_str(&format!("**Power:** `{}`\n", &system_data.power_state));
-  data.push_str(&format!("**Model:** `{}`", &system_data.model));
+  data.push_str(&format!("**POST:** `{post_state}`\n"));
+  data.push_str(&format!("**Power:** `{}`\n", &ilo_sys.power_state));
+  data.push_str(&format!("**Model:** `{}`", &ilo_sys.model));
 
   ctx
-    .send(
-      CreateReply::default().embed(
-        CreateEmbed::new()
-          .color(BINARY_PROPERTIES.embed_color)
-          .timestamp(Timestamp::now())
-          .title(format!("{} - System", ILO_HOSTNAME))
-          .description(data)
-          .fields(vec![
-            (
-              format!("CPU ({}x)", system_data.processor_summary.count),
-              system_data.processor_summary.cpu.trim().to_string(),
-              true
-            ),
-            ("RAM".to_string(), format!("{} GB", system_data.memory.total_system_memory), true),
-          ])
-      )
-    )
+    .send(CreateReply::default().embed(embed_builder(
+      "System",
+      Some(data),
+      Some(vec![
+        (
+          format!("CPU ({}x)", ilo_sys.processor_summary.count),
+          ilo_sys.processor_summary.cpu.trim().to_string(),
+          true
+        ),
+        ("RAM".to_string(), format!("{} GB", ilo_sys.memory.total_system_memory), true),
+      ])
+    )))
+    .await?;
+
+  Ok(())
+}
+
+/// Retrieve the server's IML data
+#[poise::command(slash_command)]
+async fn logs(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
+  ctx.defer().await?;
+
+  let data: Iml = ilo_data(RedfishEndpoint::LogServices).await?;
+  let mut log_entries = String::new();
+
+  for entry in data.items.iter().rev().take(5) {
+    let dt = fmt_dt(&entry.created).unwrap_or_else(|| "Unknown".to_string());
+    log_entries.push_str(&format!("**[{}:{dt}]:** {}\n", entry.severity, entry.message));
+  }
+
+  ctx
+    .send(CreateReply::default().embed(embed_builder("IML", Some(log_entries), None)))
     .await?;
 
   Ok(())

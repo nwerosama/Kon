@@ -83,7 +83,7 @@ pub async fn status(_: super::PoiseCtx<'_>) -> KonResult<()> { Ok(()) }
 
 /// Retrieve the server statuses from Wargaming
 #[poise::command(slash_command)]
-pub async fn wg(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
+async fn wg(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   let pms_asia = token_path().await.wg_pms;
   let pms_eu = pms_asia.replace("asia", "eu");
   let embed = CreateEmbed::new().color(BINARY_PROPERTIES.embed_color);

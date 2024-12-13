@@ -1,11 +1,12 @@
 [package]
 name = "kon_cmds"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
 kon_libs = { workspace = true }
 kon_tokens = { workspace = true }
+lazy_static = { workspace = true }
 poise = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
