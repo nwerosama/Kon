@@ -26,7 +26,7 @@ impl ConfigMeta {
     Self {
       env:          "prod".to_string(),
       embed_color:  0x5A99C7,
-      ready_notify: 865673694184996888,
+      ready_notify: 1268493237912604672,
       rss_channel:  865673694184996888,
       kon_logs:     1268493237912604672,
       developers:   vec![

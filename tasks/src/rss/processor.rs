@@ -20,11 +20,7 @@ use {
     Http
   },
   regex::Regex,
-  std::sync::Arc,
-  tokio::time::{
-    Duration,
-    sleep
-  }
+  std::sync::Arc
 };
 
 //  This is for building up the embed with the feed data
@@ -79,9 +75,7 @@ async fn process_incident_embed(
             message.edit(http, EditMessage::new().embed(embed)).await?;
           }
 
-          sleep(Duration::from_secs(15)).await;
-
-          if Regex::new(r"(?i)\bresolved\b").unwrap().is_match(&new_description) {
+          if Regex::new(r"(?i)^Resolved\s*-").unwrap().is_match(&new_description) {
             redis.del(redis_key).await?;
           }
         }

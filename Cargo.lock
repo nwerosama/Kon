@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "kon"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "kon_cmds",
  "kon_libs",
@@ -1122,7 +1122,7 @@ dependencies = [
 
 [[package]]
 name = "kon_libs"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cargo_toml",
  "poise",
@@ -1141,7 +1141,7 @@ dependencies = [
 
 [[package]]
 name = "kon_tasks"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "feed-rs",
  "kon_libs",

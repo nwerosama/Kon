@@ -9,6 +9,7 @@ use super::{
   parse,
   save_to_redis,
   task_err,
+  task_info,
   trim_old_content
 };
 
@@ -94,6 +95,7 @@ impl RSSFeed for GitHub {
       IncidentColorMap::Default.color()
     };
 
+    task_info("RSS:GitHub:Debug", &format!("Checking cache for incident ID: {}", &article.links[0].href));
     if cached_incident.is_empty() {
       save_to_redis(rkey, &get_incident_id(&article.links[0].href).unwrap()).await?;
       save_to_redis(&rkey_content, &new_content).await?;
@@ -108,6 +110,7 @@ impl RSSFeed for GitHub {
         } else {
           redis.set(&rkey_content, &new_content).await.unwrap();
           redis.expire(&rkey_content, 21600).await.unwrap();
+          task_info("RSS:GitHub:Debug", "Incident added in cache and preparing to send embed to Discord");
 
           Ok(Some(RSSFeedOutput::IncidentEmbed(embed(
             color,
@@ -120,6 +123,7 @@ impl RSSFeed for GitHub {
       } else {
         save_to_redis(rkey, &incident).await?;
         redis.set(&rkey_content, &new_content).await.unwrap();
+        task_info("RSS:GitHub:Debug", "Incident updated in cache and preparing to send embed to Discord");
 
         Ok(Some(RSSFeedOutput::IncidentEmbed(embed(
           color,
