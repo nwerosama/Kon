@@ -1,6 +1,18 @@
 // https://cdn.toast-server.net/RustFSHiearchy.png
 // Using the new filesystem hierarchy
 
+#[cfg(feature = "production")]
+use {
+  kon_tasks::{
+    rss,
+    run_task
+  },
+  std::{
+    sync::Arc,
+    thread::current
+  }
+};
+
 use {
   kon_cmds::register_cmds,
   kon_libs::{
@@ -12,10 +24,6 @@ use {
     KonResult,
     PoiseFwCtx,
     mention_dev
-  },
-  kon_tasks::{
-    rss,
-    run_task
   },
   kon_tokens::token_path,
   poise::serenity_prelude::{
@@ -31,11 +39,7 @@ use {
       CreateMessage
     }
   },
-  std::{
-    borrow::Cow,
-    sync::Arc,
-    thread::current
-  }
+  std::borrow::Cow
 };
 
 async fn on_ready(
@@ -70,6 +74,7 @@ async fn event_processor(
   framework: PoiseFwCtx<'_>,
   event: &FullEvent
 ) -> KonResult<()> {
+  #[cfg(feature = "production")]
   if let FullEvent::Ready { .. } = event {
     let thread_id = format!("{:?}", current().id());
     let thread_num: String = thread_id.chars().filter(|c| c.is_ascii_digit()).collect();

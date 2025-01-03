@@ -1,5 +1,7 @@
+#[cfg(feature = "production")]
 mod rss;
 
+#[cfg(feature = "production")]
 pub use rss::rss;
 
 use {
@@ -18,6 +20,7 @@ use {
   tokio::task::spawn
 };
 
+#[cfg(feature = "production")]
 fn task_info(
   name: &str,
   message: &str
@@ -25,6 +28,7 @@ fn task_info(
   println!("TaskScheduler[{name}]: {message}")
 }
 
+#[cfg(feature = "production")]
 fn task_err(
   name: &str,
   message: &str
