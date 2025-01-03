@@ -1,7 +1,7 @@
 // https://cdn.toast-server.net/RustFSHiearchy.png
 // Using the new filesystem hierarchy
 
-#[cfg(feature = "production")]
+#[cfg(feature = "rss")]
 use {
   kon_tasks::{
     rss,
@@ -74,7 +74,7 @@ async fn event_processor(
   framework: PoiseFwCtx<'_>,
   event: &FullEvent
 ) -> KonResult<()> {
-  #[cfg(feature = "production")]
+  #[cfg(feature = "rss")]
   if let FullEvent::Ready { .. } = event {
     let thread_id = format!("{:?}", current().id());
     let thread_num: String = thread_id.chars().filter(|c| c.is_ascii_digit()).collect();
