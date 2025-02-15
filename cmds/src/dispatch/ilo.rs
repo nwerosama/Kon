@@ -1,4 +1,5 @@
 use {
+  dashmap::DashMap,
   kon_libs::{
     BINARY_PROPERTIES,
     KonResult
@@ -21,114 +22,117 @@ use {
     Deserialize,
     Serialize,
     de::DeserializeOwned
-  }
+  },
+  tokio::time::Duration
 };
 
 const ILO_HOSTNAME: &str = "POMNI";
 
 lazy_static! {
-  static ref REQWEST_CLIENT: Client = ClientBuilder::new().danger_accept_invalid_certs(true).build().unwrap();
+  static ref REQWEST_CLIENT: Client = ClientBuilder::new()
+    .danger_accept_invalid_certs(true)
+    .timeout(Duration::from_secs(15))
+    .pool_max_idle_per_host(6)
+    .pool_idle_timeout(Some(Duration::from_secs(30)))
+    .tcp_keepalive(Duration::from_secs(600))
+    .build()
+    .unwrap();
+  static ref SENSOR_NAMES: DashMap<&'static str, &'static str> = {
+    let m = DashMap::new();
+    m.insert("01-Inlet Ambient", "Inlet Ambient");
+    m.insert("04-P1 DIMM 1-6", "P1 DIMM 1-6");
+    m.insert("14-Chipset Zone", "Chipset Zone");
+    m
+  };
+  static ref POST_STATES: DashMap<&'static str, &'static str> = {
+    let m = DashMap::new();
+    m.insert("FinishedPost", "Finished POST");
+    m.insert("InPost", "In POST (Booting)");
+    m.insert("PowerOff", "Powered off");
+    m
+  };
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct Chassis {
-  #[serde(rename = "Fans")]
   fans:         Vec<Fan>,
-  #[serde(rename = "Temperatures")]
   temperatures: Vec<Temperature>
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct Fan {
-  #[serde(rename = "CurrentReading")]
   current_reading: i32,
-  #[serde(rename = "FanName")]
   fan_name:        String,
-  #[serde(rename = "Status")]
   status:          Status
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct Temperature {
-  #[serde(rename = "CurrentReading")]
   current_reading:          i32,
-  #[serde(rename = "Name")]
   name:                     String,
-  #[serde(rename = "ReadingCelsius")]
   reading_celsius:          i32,
-  #[serde(rename = "Status")]
   status:                   Status,
-  #[serde(rename = "Units")]
   units:                    String,
-  #[serde(rename = "UpperThresholdCritical")]
   upper_threshold_critical: i32,
-  #[serde(rename = "UpperThresholdFatal")]
   upper_threshold_fatal:    i32
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct Status {
-  #[serde(rename = "Health")]
   health: Option<String>,
-  #[serde(rename = "State")]
   state:  String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct Power {
-  #[serde(rename = "PowerCapacityWatts")]
   power_capacity_watts: i32,
-  #[serde(rename = "PowerConsumedWatts")]
   power_consumed_watts: i32,
-  #[serde(rename = "PowerMetrics")]
   power_metrics:        PowerMetrics
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct PowerMetrics {
-  #[serde(rename = "AverageConsumedWatts")]
   average_consumed_watts: i32,
-  #[serde(rename = "MaxConsumedWatts")]
   max_consumed_watts:     i32,
-  #[serde(rename = "MinConsumedWatts")]
   min_consumed_watts:     i32
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct System {
-  #[serde(rename = "Memory")]
   memory:            Memory,
-  #[serde(rename = "Model")]
   model:             String,
-  #[serde(rename = "Oem")]
   oem:               Oem,
-  #[serde(rename = "PowerState")]
   power_state:       String,
-  #[serde(rename = "ProcessorSummary")]
   processor_summary: ProcessorSummary
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Memory {
   #[serde(rename = "TotalSystemMemoryGB")]
-  total_system_memory: i32
+  total_system_memory_gb: i32
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 struct ProcessorSummary {
-  #[serde(rename = "Count")]
   count: i32,
-  #[serde(rename = "Model")]
-  cpu:   String
+  model: String
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Oem {
   #[serde(rename = "Hp")]
   hp: Hp
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Hp {
   #[serde(rename = "PostState")]
   post_state: String
@@ -148,12 +152,10 @@ struct Iml {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct ImlEntry {
-  #[serde(rename = "Created")]
   created:  String,
-  #[serde(rename = "Message")]
   message:  String,
-  #[serde(rename = "Severity")]
   severity: String
 }
 
@@ -251,12 +253,7 @@ async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
       continue;
     }
 
-    let name = match temp.name.as_str() {
-      "01-Inlet Ambient" => "Inlet Ambient",
-      "04-P1 DIMM 1-6" => "P1 DIMM 1-6",
-      "14-Chipset Zone" => "Chipset Zone",
-      _ => "Unknown Sensor"
-    };
+    let name = SENSOR_NAMES.get(temp.name.as_str()).map(|s| *s).unwrap_or("Unknown sensor");
 
     tempdata.push_str(&format!("**{name}:** `{}°C`\n", temp.reading_celsius));
   }
@@ -285,13 +282,14 @@ async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
   let data: Power = ilo_data(RedfishEndpoint::Power).await?;
 
-  let mut powerdata = String::new();
-
-  powerdata.push_str(&format!("**Power Capacity:** `{}w`\n", &data.power_capacity_watts));
-  powerdata.push_str(&format!("**Power Consumed:** `{}w`\n", &data.power_consumed_watts));
-  powerdata.push_str(&format!("**Average Power:** `{}w`\n", &data.power_metrics.average_consumed_watts));
-  powerdata.push_str(&format!("**Max Consumed:** `{}w`\n", &data.power_metrics.max_consumed_watts));
-  powerdata.push_str(&format!("**Min Consumed:** `{}w`", &data.power_metrics.min_consumed_watts));
+  let powerdata = format!(
+    "**Power Capacity:** `{}w`\n**Power Consumed:** `{}w`\n**Average Power:** `{}w`\n**Max Consumed:** `{}w`\n**Min Consumed:** `{}w`",
+    data.power_capacity_watts,
+    data.power_consumed_watts,
+    data.power_metrics.average_consumed_watts,
+    data.power_metrics.max_consumed_watts,
+    data.power_metrics.min_consumed_watts
+  );
 
   ctx
     .send(CreateReply::default().embed(embed_builder("Power", Some(powerdata), None)))
@@ -312,12 +310,11 @@ async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
 
   let mut data = String::new();
 
-  let post_state = match ilo_sys.oem.hp.post_state.as_str() {
-    "FinishedPost" => "Finished POST",
-    "InPost" => "In POST (Booting)",
-    "PowerOff" => "Powered off",
-    _ => "Unknown State"
-  };
+  let post_state = POST_STATES
+    .get(ilo_sys.oem.hp.post_state.as_str())
+    .map(|s| *s)
+    .unwrap_or("Unknown POST state");
+
   if ilo_sys.oem.hp.post_state != "FinishedPost" {
     println!("iLO:PostState = {}", ilo_sys.oem.hp.post_state);
   }
@@ -337,10 +334,10 @@ async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
       Some(vec![
         (
           format!("CPU ({}x)", ilo_sys.processor_summary.count),
-          ilo_sys.processor_summary.cpu.trim().to_string(),
+          ilo_sys.processor_summary.model.trim().to_string(),
           true
         ),
-        ("RAM".to_string(), format!("{} GB", ilo_sys.memory.total_system_memory), true),
+        ("RAM".to_string(), format!("{} GB", ilo_sys.memory.total_system_memory_gb), true),
       ])
     )))
     .await?;
