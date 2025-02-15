@@ -1,18 +1,6 @@
 // https://cdn.toast-server.net/RustFSHiearchy.png
 // Using the new filesystem hierarchy
 
-#[cfg(feature = "rss")]
-use {
-  kon_tasks::{
-    rss,
-    run_task
-  },
-  std::{
-    sync::Arc,
-    thread::current
-  }
-};
-
 use {
   kon_cmds::register_cmds,
   kon_libs::{
@@ -22,7 +10,6 @@ use {
     GIT_COMMIT_HASH,
     KonData,
     KonResult,
-    PoiseFwCtx,
     mention_dev
   },
   kon_tokens::token_path,
@@ -30,7 +17,6 @@ use {
     ChannelId,
     ClientBuilder,
     Context,
-    FullEvent,
     GatewayIntents,
     Ready,
     builder::{
@@ -68,23 +54,6 @@ async fn on_ready(
     .await?;
 
   Ok(KonData {})
-}
-
-async fn event_processor(
-  framework: PoiseFwCtx<'_>,
-  event: &FullEvent
-) -> KonResult<()> {
-  #[cfg(feature = "rss")]
-  if let FullEvent::Ready { .. } = event {
-    let thread_id = format!("{:?}", current().id());
-    let thread_num: String = thread_id.chars().filter(|c| c.is_ascii_digit()).collect();
-    println!("Event[Ready]: Task Scheduler operating on thread {thread_num}");
-
-    let ctx = Arc::new(framework.serenity_context.clone());
-    run_task(ctx.clone(), rss).await;
-  }
-
-  Ok(())
 }
 
 #[tokio::main]
@@ -138,7 +107,6 @@ async fn main() {
         })
       },
       initialize_owners: true,
-      event_handler: |framework, event| Box::pin(event_processor(framework, event)),
       ..Default::default()
     })
     .setup(|ctx, ready, _| Box::pin(on_ready(ctx, ready)))

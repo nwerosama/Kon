@@ -2,9 +2,9 @@ FROM scratch AS base
 WORKDIR /builder
 COPY . .
 
-FROM alpine:3.21
+FROM adelielinux/adelie:1.0-beta6
 LABEL org.opencontainers.image.source="https://git.toast-server.net/toast/Kon"
-RUN apk add --no-cache libgcc fluidsynth
+RUN apk add --no-cache libgcc
 WORKDIR /kon
 COPY --from=base /builder/target/x86_64-unknown-linux-musl/release/kon .
 CMD [ "./kon" ]

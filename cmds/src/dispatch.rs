@@ -1,5 +1,4 @@
 mod ilo;
-mod midi;
 mod status;
 mod uptime;
 
@@ -12,7 +11,6 @@ use kon_libs::{
 
 use {
   ilo::ilo,
-  midi::midi_to_wav,
   status::status,
   uptime::uptime
 };
@@ -23,7 +21,7 @@ macro_rules! commands {
   }
 }
 
-pub fn register_cmds() -> Vec<poise::Command<KonData, KonError>> { commands!(deploy, ping, ilo, midi_to_wav, status, uptime) }
+pub fn register_cmds() -> Vec<poise::Command<KonData, KonError>> { commands!(deploy, ping, ilo, status, uptime) }
 
 /// Deploy the commands globally or in a guild
 #[poise::command(prefix_command, owners_only, guild_only)]
