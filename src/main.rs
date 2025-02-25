@@ -1,3 +1,5 @@
+mod errors;
+mod shutdown;
 // https://cdn.toast-server.net/RustFSHiearchy.png
 // Using the new filesystem hierarchy
 
@@ -9,8 +11,7 @@ use {
     GIT_COMMIT_BRANCH,
     GIT_COMMIT_HASH,
     KonData,
-    KonResult,
-    mention_dev
+    KonResult
   },
   kon_tokens::token_path,
   poise::serenity_prelude::{
@@ -84,28 +85,7 @@ async fn main() {
           println!("Discord[{get_guild_name}]: {} ran /{}", ctx.author().name, ctx.command().qualified_name);
         })
       },
-      on_error: |error| {
-        Box::pin(async move {
-          match error {
-            poise::FrameworkError::Command { error, ctx, .. } => {
-              println!("PoiseCommandError({}): {error}", ctx.command().qualified_name);
-              ctx
-                .reply(format!(
-                  "Encountered an error during command execution, ask {} to check console for more details!",
-                  mention_dev(ctx).unwrap_or_default()
-                ))
-                .await
-                .expect("Error sending message");
-            },
-            poise::FrameworkError::EventHandler { error, event, .. } => println!("PoiseEventHandlerError({}): {error}", event.snake_case_name()),
-            poise::FrameworkError::UnknownInteraction { interaction, .. } => println!(
-              "PoiseUnknownInteractionError: {} tried to execute an unknown interaction ({})",
-              interaction.user.name, interaction.data.name
-            ),
-            other => println!("PoiseOtherError: {other}")
-          }
-        })
-      },
+      on_error: |error| Box::pin(async move { errors::fw_errors(error).await }),
       initialize_owners: true,
       ..Default::default()
     })
@@ -119,6 +99,13 @@ async fn main() {
   .framework(framework)
   .await
   .expect("Error creating client");
+
+  let shard_manager = client.shard_manager.clone();
+
+  tokio::spawn(async move {
+    shutdown::gracefully_shutdown().await;
+    shard_manager.shutdown_all().await;
+  });
 
   if let Err(why) = client.start().await {
     println!("Error starting client: {why:#?}");
