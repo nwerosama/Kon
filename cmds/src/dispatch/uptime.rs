@@ -45,6 +45,22 @@ fn get_os_info() -> String {
   format!("{name} {version}")
 }
 
+fn fmt_mem(bytes: u64) -> String {
+  let units = ["B", "KB", "MB", "GB"];
+  let mut bytes = bytes as f64;
+  let mut unit = units[0];
+
+  for &u in &units {
+    if bytes < 1024.0 {
+      unit = u;
+      break;
+    }
+    bytes /= 1024.0;
+  }
+
+  format!("{bytes:.2} {unit}")
+}
+
 /// Retrieve host and bot uptimes
 #[poise::command(slash_command, install_context = "Guild|User", interaction_context = "Guild|BotDm|PrivateChannel")]
 pub async fn uptime(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
@@ -58,6 +74,16 @@ pub async fn uptime(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   // Fetch system's processor
   let cpu = sys.cpus();
 
+  // Fetch system memory usage
+  let sram = fmt_mem(sys.used_memory());
+  let sram_total = fmt_mem(sys.total_memory());
+
+  // Fetch process memory usage
+  let pram = match sys.process(sysinfo::get_current_pid().unwrap()) {
+    Some(proc) => fmt_mem(proc.memory()),
+    None => String::from("Unavailable")
+  };
+
   // Fetch bot's process uptime
   let curr_pid = sysinfo::get_current_pid().unwrap();
   let now = SystemTime::now();
@@ -68,10 +94,11 @@ pub async fn uptime(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   }
 
   let stat_msg = [
-    format!("**{} {}** `{GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH}`", bot.name, BOT_VERSION.as_str()),
+    format!("**{} v{}** `{GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH}`", bot.name, BOT_VERSION.as_str()),
     format!(">>> System: `{}`", format_duration(sys_uptime)),
     format!("Process: `{}`", format_duration(proc_uptime)),
     format!("CPU: `{}`", cpu[0].brand()),
+    format!("RAM: `{pram}` (`{sram}/{sram_total}`)"),
     format!("OS: `{}`", get_os_info())
   ];
   ctx.reply(stat_msg.join("\n")).await?;
