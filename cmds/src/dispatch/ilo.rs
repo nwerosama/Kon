@@ -189,6 +189,17 @@ async fn ilo_data<T: DeserializeOwned>(endpoint: RedfishEndpoint) -> Result<T, R
   res.json::<T>().await
 }
 
+async fn ilo_err(
+  ctx: &super::PoiseCtx<'_>,
+  err: ReqError
+) {
+  let msg = format!("Command failed due to an error;-```{err}```");
+
+  if let Err(e) = ctx.reply(&msg).await {
+    eprintln!("Couldn't reply to command ({e}), dumped here instead: {msg}")
+  }
+}
+
 fn embed_builder(
   title: &str,
   description: Option<String>,
@@ -242,36 +253,41 @@ pub async fn ilo(_: super::PoiseCtx<'_>) -> KonResult<()> { Ok(()) }
 #[poise::command(slash_command)]
 async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
-  let data: Chassis = ilo_data(RedfishEndpoint::Thermal).await?;
-  let mut tempdata = String::new();
-  let mut fandata = String::new();
 
-  let allowed_sensors = ["01-Inlet Ambient", "04-P1 DIMM 1-6", "14-Chipset Zone"];
+  match ilo_data::<Chassis>(RedfishEndpoint::Thermal).await {
+    Ok(data) => {
+      let mut tempdata = String::new();
+      let mut fandata = String::new();
 
-  for temp in &data.temperatures {
-    if temp.reading_celsius == 0 || !allowed_sensors.contains(&temp.name.as_str()) {
-      continue;
-    }
+      let allowed_sensors = ["01-Inlet Ambient", "04-P1 DIMM 1-6", "14-Chipset Zone"];
 
-    let name = SENSOR_NAMES.get(temp.name.as_str()).map(|s| *s).unwrap_or("Unknown sensor");
+      for temp in &data.temperatures {
+        if temp.reading_celsius == 0 || !allowed_sensors.contains(&temp.name.as_str()) {
+          continue;
+        }
 
-    tempdata.push_str(&format!("**{name}:** `{}°C`\n", temp.reading_celsius));
+        let name = SENSOR_NAMES.get(temp.name.as_str()).map(|s| *s).unwrap_or("Unknown sensor");
+
+        tempdata.push_str(&format!("**{name}:** `{}°C`\n", temp.reading_celsius));
+      }
+      for fan in &data.fans {
+        if fan.current_reading == 0 {
+          continue;
+        }
+
+        fandata.push_str(&format!("**{}:** `{}%`\n", fan.fan_name, fan.current_reading));
+      }
+
+      ctx
+        .send(CreateReply::default().embed(embed_builder(
+          "Temperatures",
+          None,
+          Some(vec![("Temperatures".to_string(), tempdata, false), ("Fans".to_string(), fandata, false)])
+        )))
+        .await?;
+    },
+    Err(e) => ilo_err(&ctx, e).await
   }
-  for fan in &data.fans {
-    if fan.current_reading == 0 {
-      continue;
-    }
-
-    fandata.push_str(&format!("**{}:** `{}%`\n", fan.fan_name, fan.current_reading));
-  }
-
-  ctx
-    .send(CreateReply::default().embed(embed_builder(
-      "Temperatures",
-      None,
-      Some(vec![("Temperatures".to_string(), tempdata, false), ("Fans".to_string(), fandata, false)])
-    )))
-    .await?;
 
   Ok(())
 }
@@ -280,20 +296,24 @@ async fn temperature(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
 #[poise::command(slash_command)]
 async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
-  let data: Power = ilo_data(RedfishEndpoint::Power).await?;
 
-  let powerdata = format!(
-    "**Power Capacity:** `{}w`\n**Power Consumed:** `{}w`\n**Average Power:** `{}w`\n**Max Consumed:** `{}w`\n**Min Consumed:** `{}w`",
-    data.power_capacity_watts,
-    data.power_consumed_watts,
-    data.power_metrics.average_consumed_watts,
-    data.power_metrics.max_consumed_watts,
-    data.power_metrics.min_consumed_watts
-  );
+  match ilo_data::<Power>(RedfishEndpoint::Power).await {
+    Ok(data) => {
+      let powerdata = format!(
+        "**Power Capacity:** `{}w`\n**Power Consumed:** `{}w`\n**Average Power:** `{}w`\n**Max Consumed:** `{}w`\n**Min Consumed:** `{}w`",
+        data.power_capacity_watts,
+        data.power_consumed_watts,
+        data.power_metrics.average_consumed_watts,
+        data.power_metrics.max_consumed_watts,
+        data.power_metrics.min_consumed_watts
+      );
 
-  ctx
-    .send(CreateReply::default().embed(embed_builder("Power", Some(powerdata), None)))
-    .await?;
+      ctx
+        .send(CreateReply::default().embed(embed_builder("Power", Some(powerdata), None)))
+        .await?;
+    },
+    Err(e) => ilo_err(&ctx, e).await
+  }
 
   Ok(())
 }
@@ -303,44 +323,49 @@ async fn power(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
 async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
 
-  let (ilo_sys, ilo_event) = tokio::join!(ilo_data(RedfishEndpoint::System), ilo_data(RedfishEndpoint::EventService));
+  let (ilo_sys, ilo_event) = tokio::join!(
+    ilo_data::<System>(RedfishEndpoint::System),
+    ilo_data::<Event>(RedfishEndpoint::EventService)
+  );
 
-  let ilo_sys: System = ilo_sys.unwrap();
-  let ilo_event: Event = ilo_event.unwrap();
+  match (ilo_sys, ilo_event) {
+    (Ok(ilo_sys), Ok(ilo_event)) => {
+      let mut data = String::new();
 
-  let mut data = String::new();
+      let post_state = POST_STATES
+        .get(ilo_sys.oem.hp.post_state.as_str())
+        .map(|s| *s)
+        .unwrap_or("Unknown POST state");
 
-  let post_state = POST_STATES
-    .get(ilo_sys.oem.hp.post_state.as_str())
-    .map(|s| *s)
-    .unwrap_or("Unknown POST state");
+      if ilo_sys.oem.hp.post_state != "FinishedPost" {
+        println!("iLO:PostState = {}", ilo_sys.oem.hp.post_state);
+      }
 
-  if ilo_sys.oem.hp.post_state != "FinishedPost" {
-    println!("iLO:PostState = {}", ilo_sys.oem.hp.post_state);
+      data.push_str(&format!(
+        "**Health:** `{}`\n",
+        ilo_event.status.health.as_ref().unwrap_or(&"Unknown".to_string())
+      ));
+      data.push_str(&format!("**POST:** `{post_state}`\n"));
+      data.push_str(&format!("**Power:** `{}`\n", &ilo_sys.power_state));
+      data.push_str(&format!("**Model:** `{}`", &ilo_sys.model));
+
+      ctx
+        .send(CreateReply::default().embed(embed_builder(
+          "System",
+          Some(data),
+          Some(vec![
+            (
+              format!("CPU ({}x)", ilo_sys.processor_summary.count),
+              ilo_sys.processor_summary.model.trim().to_string(),
+              true
+            ),
+            ("RAM".to_string(), format!("{} GB", ilo_sys.memory.total_system_memory_gb), true),
+          ])
+        )))
+        .await?;
+    },
+    (Err(e), _) | (_, Err(e)) => ilo_err(&ctx, e).await
   }
-
-  data.push_str(&format!(
-    "**Health:** `{}`\n",
-    ilo_event.status.health.as_ref().unwrap_or(&"Unknown".to_string())
-  ));
-  data.push_str(&format!("**POST:** `{post_state}`\n"));
-  data.push_str(&format!("**Power:** `{}`\n", &ilo_sys.power_state));
-  data.push_str(&format!("**Model:** `{}`", &ilo_sys.model));
-
-  ctx
-    .send(CreateReply::default().embed(embed_builder(
-      "System",
-      Some(data),
-      Some(vec![
-        (
-          format!("CPU ({}x)", ilo_sys.processor_summary.count),
-          ilo_sys.processor_summary.model.trim().to_string(),
-          true
-        ),
-        ("RAM".to_string(), format!("{} GB", ilo_sys.memory.total_system_memory_gb), true),
-      ])
-    )))
-    .await?;
 
   Ok(())
 }
@@ -350,17 +375,21 @@ async fn system(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
 async fn logs(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
 
-  let data: Iml = ilo_data(RedfishEndpoint::LogServices).await?;
-  let mut log_entries = String::new();
+  match ilo_data::<Iml>(RedfishEndpoint::LogServices).await {
+    Ok(data) => {
+      let mut log_entries = String::new();
 
-  for entry in data.items.iter().rev().take(5) {
-    let dt = fmt_dt(&entry.created).unwrap_or_else(|| "Unknown".to_string());
-    log_entries.push_str(&format!("**[{}:{dt}]:** {}\n", entry.severity, entry.message));
+      for entry in data.items.iter().rev().take(5) {
+        let dt = fmt_dt(&entry.created).unwrap_or_else(|| "Unknown".to_string());
+        log_entries.push_str(&format!("**[{}:{dt}]:** {}\n", entry.severity, entry.message));
+      }
+
+      ctx
+        .send(CreateReply::default().embed(embed_builder("IML", Some(log_entries), None)))
+        .await?;
+    },
+    Err(e) => ilo_err(&ctx, e).await
   }
-
-  ctx
-    .send(CreateReply::default().embed(embed_builder("IML", Some(log_entries), None)))
-    .await?;
 
   Ok(())
 }
