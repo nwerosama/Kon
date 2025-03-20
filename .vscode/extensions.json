@@ -3,9 +3,6 @@
     "fill-labs.dependi",
     "usernamehw.errorlens",
     "tamasfe.even-better-toml",
-    "GitHub.vscode-pull-request-github",
-    "rust-lang.rust-analyzer",
-    "redhat.vscode-yaml",
-    "sumneko.lua"
+    "rust-lang.rust-analyzer"
   ]
 }

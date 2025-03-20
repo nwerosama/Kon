@@ -1,7 +1,7 @@
 services:
-  bot:
-    container_name: kon
-    #image: git.toast-server.net/toast/kon:master
+  app:
+    container_name: kon-app
+    #image: git.toast-server.net/nwerosama/kon:master
     build: .
     restart: unless-stopped
     depends_on:

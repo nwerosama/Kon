@@ -1,7 +1,7 @@
 mod errors;
 mod shutdown;
-// https://cdn.toast-server.net/RustFSHiearchy.png
-// Using the new filesystem hierarchy
+// https://cdn.toast-server.net/RustFSHiearachy.png
+// Using the new filesystem hiearachy
 
 use {
   kon_cmds::register_cmds,
@@ -35,7 +35,7 @@ async fn on_ready(
 ) -> KonResult<KonData> {
   #[cfg(not(feature = "production"))]
   {
-    println!("Event[Ready][Notice]: Detected a non-production environment!");
+    println!("Event[Ready][Notice]: Detected a development environment!");
     let gateway = ctx.http.get_bot_gateway().await?;
     let session = gateway.session_start_limit;
     println!("Event[Ready][Notice]: Session limit: {}/{}", session.remaining, session.total);
