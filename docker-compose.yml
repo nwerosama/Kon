@@ -4,6 +4,7 @@ services:
     #image: git.toast-server.net/nwerosama/kon:master
     build: .
     restart: unless-stopped
+    env_file: .env.bot
     depends_on:
       - cache
   cache:
