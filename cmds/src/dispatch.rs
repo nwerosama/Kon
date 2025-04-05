@@ -1,7 +1,7 @@
 mod ilo;
-mod status;
 mod translate;
 mod uptime;
+mod wargaming;
 
 use kon_libs::{
   KonData,
@@ -12,9 +12,9 @@ use kon_libs::{
 
 use {
   ilo::ilo,
-  status::status,
   translate::translate,
-  uptime::uptime
+  uptime::uptime,
+  wargaming::wargaming
 };
 
 macro_rules! commands {
@@ -23,7 +23,7 @@ macro_rules! commands {
   }
 }
 
-pub fn register_cmds() -> Vec<poise::Command<KonData, KonError>> { commands!(deploy, ping, ilo, status, translate, uptime) }
+pub fn register_cmds() -> Vec<poise::Command<KonData, KonError>> { commands!(deploy, ping, ilo, wargaming, translate, uptime) }
 
 /// Deploy the commands globally or in a guild
 #[poise::command(prefix_command, owners_only, guild_only)]

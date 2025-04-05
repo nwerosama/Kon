@@ -1,9 +1,11 @@
 [package]
 name = "kon_cmds"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 
 [dependencies]
+dashmap = { workspace = true }
+futures = { workspace = true }
 kon_libs = { workspace = true }
 kon_tokens = { workspace = true }
 lazy_static = { workspace = true }
@@ -14,4 +16,3 @@ serde_json = { workspace = true }
 sysinfo = { workspace = true }
 tokio = { workspace = true }
 uptime_lib = { workspace = true }
-dashmap = { workspace = true }
