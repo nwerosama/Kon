@@ -1080,7 +1080,7 @@ dependencies = [
 
 [[package]]
 name = "kon"
-version = "0.6.10"
+version = "0.6.11"
 dependencies = [
  "kon_cmds",
  "kon_libs",
@@ -1091,7 +1091,7 @@ dependencies = [
 
 [[package]]
 name = "kon_cmds"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "dashmap 6.1.0",
  "futures",

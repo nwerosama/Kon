@@ -13,14 +13,25 @@ use {
   serde_json::Value,
   std::{
     collections::HashMap,
+    sync::OnceLock,
     time::Duration
   }
 };
 
-async fn pms_serverstatus(url: String) -> Result<Vec<(String, Vec<Value>)>, String> {
-  let client = HttpClient::new();
-  let duration = Duration::from_secs(5);
-  let req = match tokio::time::timeout(duration, client.get(url.as_str(), "PMS-Status")).await {
+type IdNameHashmap = HashMap<&'static str, &'static str>;
+
+const HTTP_TIMEOUT: Duration = Duration::from_secs(5);
+
+fn id_name_map() -> &'static IdNameHashmap {
+  static ID_NAME_MAP: OnceLock<IdNameHashmap> = OnceLock::new();
+  ID_NAME_MAP.get_or_init(|| [("wotbsg", "ASIA"), ("wowssg", "ASIA"), ("wowseu", "EU")].iter().cloned().collect())
+}
+
+async fn pms_serverstatus(
+  http: &HttpClient,
+  url: String
+) -> Result<Vec<(String, Vec<Value>)>, String> {
+  let req = match tokio::time::timeout(HTTP_TIMEOUT, http.get(url.as_str(), "PMS-Status")).await {
     Ok(result) => match result {
       Ok(req) => req,
       Err(e) => return Err(format!("Failed to connect: {e}"))
@@ -28,7 +39,7 @@ async fn pms_serverstatus(url: String) -> Result<Vec<(String, Vec<Value>)>, Stri
     Err(_) => return Err("Request timed out".to_string())
   };
 
-  let response = match tokio::time::timeout(duration, req.json::<HashMap<String, Value>>()).await {
+  let response = match tokio::time::timeout(HTTP_TIMEOUT, req.json::<HashMap<String, Value>>()).await {
     Ok(result) => match result {
       Ok(data) => data,
       Err(e) => return Err(format!("Failed to parse response: {e}"))
@@ -57,7 +68,6 @@ async fn pms_serverstatus(url: String) -> Result<Vec<(String, Vec<Value>)>, Stri
 
 fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, String, bool)> {
   let mut server_map: HashMap<String, Vec<(String, String)>> = HashMap::new();
-  let id_name_map: HashMap<&str, &str> = [("wotbsg", "ASIA"), ("wowssg", "ASIA"), ("wowseu", "EU")].iter().cloned().collect();
 
   for (title, mapped_servers) in servers {
     for server in mapped_servers {
@@ -68,7 +78,7 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
         "-1" => "Offline",
         _ => "Unknown"
       };
-      let name = id_name_map.get(id).unwrap_or(&name);
+      let name = id_name_map().get(id).unwrap_or(&name);
       server_map
         .entry(title.clone())
         .or_default()
@@ -93,7 +103,7 @@ fn process_pms_statuses(servers: Vec<(String, Vec<Value>)>) -> Vec<(String, Stri
 pub async fn wargaming(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   ctx.defer().await?;
 
-  let regions = [
+  static REGIONS: [(&str, &str); 4] = [
     ("asia", "Asia (WoT)"),
     ("eu", "Europe (WoT)"),
     ("wgcb", "Console (WoTX)"),
@@ -103,17 +113,18 @@ pub async fn wargaming(ctx: super::PoiseCtx<'_>) -> KonResult<()> {
   let pms_base = token_path().await.wg_pms;
   let mut embed = CreateEmbed::new().color(BINARY_PROPERTIES.embed_color);
 
-  let mut futures = Vec::new();
-  let mut region_names = Vec::new();
+  let http = HttpClient::new();
+  let mut futures = Vec::with_capacity(REGIONS.len());
+  let mut region_names = Vec::with_capacity(REGIONS.len());
 
-  for (region, name) in &regions {
+  for (region, name) in &REGIONS {
     let url = if *region == "asia" {
       pms_base.clone()
     } else {
       pms_base.replace("asia", region)
     };
 
-    futures.push(pms_serverstatus(url));
+    futures.push(pms_serverstatus(&http, url));
     region_names.push(name);
   }
 
