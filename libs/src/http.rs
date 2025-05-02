@@ -7,7 +7,7 @@ use {
   std::time::Duration
 };
 
-const ERROR_PREFIX: &str = "HTTPClient[Error]:";
+const ERROR_PREFIX: &str = "HTTPClient[Error]";
 
 pub struct HttpClient(Client);
 

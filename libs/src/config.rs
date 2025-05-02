@@ -30,7 +30,7 @@ impl ConfigMeta {
       rss_channel:  865673694184996888,
       kon_logs:     1268493237912604672,
       developers:   vec![
-        190407856527376384, // toast.ts
+        190407856527376384, // nwero.sama
       ]
     }
   }

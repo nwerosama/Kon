@@ -1,13 +1,12 @@
 use {
   kon_libs::{
-    KonData,
     KonError,
     mention_dev
   },
   poise::FrameworkError
 };
 
-pub async fn fw_errors(error: FrameworkError<'_, KonData, KonError>) {
+pub async fn fw_errors(error: FrameworkError<'_, (), KonError>) {
   match error {
     poise::FrameworkError::Command { error, ctx, .. } => {
       println!("PoiseCommandError({}): {error}", ctx.command().qualified_name);

@@ -10,7 +10,6 @@ use {
     BOT_VERSION,
     GIT_COMMIT_BRANCH,
     GIT_COMMIT_HASH,
-    KonData,
     KonResult
   },
   kon_tokens::token_path,
@@ -32,17 +31,17 @@ use {
 async fn on_ready(
   ctx: &Context,
   ready: &Ready
-) -> KonResult<KonData> {
+) -> KonResult<()> {
   #[cfg(not(feature = "production"))]
   {
-    println!("Event[Ready][Notice]: Detected a development environment!");
+    println!("Event[Ready][Notice] Detected a development environment!");
     let gateway = ctx.http.get_bot_gateway().await?;
     let session = gateway.session_start_limit;
-    println!("Event[Ready][Notice]: Session limit: {}/{}", session.remaining, session.total);
+    println!("Event[Ready][Notice] Session limit: {}/{}", session.remaining, session.total);
   }
 
-  println!("Event[Ready]: Build version: v{} ({GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH})", *BOT_VERSION);
-  println!("Event[Ready]: Connected to API as {}", ready.user.name);
+  println!("Event[Ready] Build version: v{} ({GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH})", *BOT_VERSION);
+  println!("Event[Ready] Connected to API as {}", ready.user.name);
 
   let message = CreateMessage::new();
   let ready_embed = CreateEmbed::new()
@@ -54,7 +53,7 @@ async fn on_ready(
     .send_message(&ctx.http, message.add_embed(ready_embed))
     .await?;
 
-  Ok(KonData {})
+  Ok(())
 }
 
 #[tokio::main]
@@ -82,7 +81,7 @@ async fn main() {
             Some(guild) => guild.name.clone(),
             None => String::from("DM/User-App")
           };
-          println!("Discord[{get_guild_name}]: {} ran /{}", ctx.author().name, ctx.command().qualified_name);
+          println!("Discord[{get_guild_name}] {} ran /{}", ctx.author().name, ctx.command().qualified_name);
         })
       },
       on_error: |error| Box::pin(async move { errors::fw_errors(error).await }),
