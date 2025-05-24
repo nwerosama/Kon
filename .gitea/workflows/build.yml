@@ -69,7 +69,6 @@ jobs:
       - name: Compile
         run: |
           rustup target add x86_64-unknown-linux-musl
-          export GIT_COMMIT_HASH=${{ github.sha }} && \
           cargo zigbuild --target x86_64-unknown-linux-musl --locked -rF production
 
       - name: Build and push image
@@ -87,7 +86,7 @@ jobs:
     needs: build
     steps:
       - name: Deploy update
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}

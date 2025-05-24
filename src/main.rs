@@ -1,60 +1,19 @@
 mod errors;
+mod events;
 mod shutdown;
 // https://cdn.toast-server.net/RustFSHiearachy.png
 // Using the new filesystem hiearachy
 
 use {
   kon_cmds::register_cmds,
-  kon_libs::{
-    BINARY_PROPERTIES,
-    BOT_VERSION,
-    GIT_COMMIT_BRANCH,
-    GIT_COMMIT_HASH,
-    KonResult
-  },
-  kon_tokens::token_path,
+  kon_libs::BINARY_PROPERTIES,
+  kon_tokens::discord_token,
   poise::serenity_prelude::{
-    ChannelId,
     ClientBuilder,
-    Context,
-    GatewayIntents,
-    Ready,
-    builder::{
-      CreateEmbed,
-      CreateEmbedAuthor,
-      CreateMessage
-    }
+    GatewayIntents
   },
   std::borrow::Cow
 };
-
-async fn on_ready(
-  ctx: &Context,
-  ready: &Ready
-) -> KonResult<()> {
-  #[cfg(not(feature = "production"))]
-  {
-    println!("Event[Ready][Notice] Detected a development environment!");
-    let gateway = ctx.http.get_bot_gateway().await?;
-    let session = gateway.session_start_limit;
-    println!("Event[Ready][Notice] Session limit: {}/{}", session.remaining, session.total);
-  }
-
-  println!("Event[Ready] Build version: v{} ({GIT_COMMIT_HASH}:{GIT_COMMIT_BRANCH})", *BOT_VERSION);
-  println!("Event[Ready] Connected to API as {}", ready.user.name);
-
-  let message = CreateMessage::new();
-  let ready_embed = CreateEmbed::new()
-    .color(BINARY_PROPERTIES.embed_color)
-    .thumbnail(ready.user.avatar_url().unwrap_or_default())
-    .author(CreateEmbedAuthor::new(format!("{} is ready!", ready.user.name)));
-
-  ChannelId::new(BINARY_PROPERTIES.ready_notify)
-    .send_message(&ctx.http, message.add_embed(ready_embed))
-    .await?;
-
-  Ok(())
-}
 
 #[tokio::main]
 async fn main() {
@@ -77,33 +36,38 @@ async fn main() {
       },
       pre_command: |ctx| {
         Box::pin(async move {
-          let get_guild_name = match ctx.guild() {
-            Some(guild) => guild.name.clone(),
-            None => String::from("DM/User-App")
+          let guild_name: Cow<'_, str> = match ctx.guild() {
+            Some(guild) => Cow::Owned(guild.name.clone().into()),
+            None => Cow::Borrowed("Unknown Guild")
           };
-          println!("Discord[{get_guild_name}] {} ran /{}", ctx.author().name, ctx.command().qualified_name);
+          let prefix = match ctx.command().prefix_action {
+            Some(_) => ctx.framework().options.prefix_options.prefix.as_ref().unwrap(),
+            None => "/"
+          };
+
+          println!("Discord[{guild_name}] {} ran {prefix}{}", ctx.author().name, ctx.command().qualified_name);
         })
       },
       on_error: |error| Box::pin(async move { errors::fw_errors(error).await }),
       initialize_owners: true,
       ..Default::default()
     })
-    .setup(|ctx, ready, _| Box::pin(on_ready(ctx, ready)))
     .build();
 
   let mut client = ClientBuilder::new(
-    token_path().await.main,
+    discord_token().await,
     GatewayIntents::GUILDS | GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT
   )
   .framework(framework)
+  .event_handler(events::DiscordEvents)
   .await
   .expect("Error creating client");
 
-  let shard_manager = client.shard_manager.clone();
+  let shutdown_trig = client.shard_manager.get_shutdown_trigger();
 
   tokio::spawn(async move {
     shutdown::gracefully_shutdown().await;
-    shard_manager.shutdown_all().await;
+    shutdown_trig();
   });
 
   if let Err(why) = client.start().await {

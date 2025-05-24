@@ -54,12 +54,11 @@ async fn pms_serverstatus(
 
   let mut servers = Vec::new();
   for item in data {
-    if let Some(title) = item["title"].as_str() {
-      if let Some(servers_statuses) = item["servers_statuses"]["data"].as_array() {
-        if !servers_statuses.is_empty() {
-          servers.push((title.to_owned(), servers_statuses.clone()));
-        }
-      }
+    if let Some(title) = item["title"].as_str()
+      && let Some(servers_statuses) = item["servers_statuses"]["data"].as_array()
+      && !servers_statuses.is_empty()
+    {
+      servers.push((title.to_owned(), servers_statuses.clone()));
     }
   }
 

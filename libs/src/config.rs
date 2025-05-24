@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 pub struct ConfigMeta {
   pub env:          String,
-  pub embed_color:  i32,
+  pub embed_color:  u32,
   pub ready_notify: u64,
   pub rss_channel:  u64,
   pub kon_logs:     u64,
@@ -48,7 +48,7 @@ impl ConfigMeta {
   #[cfg(not(feature = "production"))]
   fn embed_color(
     mut self,
-    color: i32
+    color: u32
   ) -> Self {
     self.embed_color = color;
     self

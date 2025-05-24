@@ -1,7 +1,9 @@
 use {
+  poise::serenity_prelude::Token,
   std::{
     env::args,
     error::Error,
+    str::FromStr,
     sync::LazyLock
   },
   tokenservice_client::{
@@ -37,6 +39,8 @@ impl TSClient {
 pub async fn token_path() -> TokenServiceApi {
   match TSCLIENT.lock().await.get().await {
     Ok(a) => a,
-    Err(e) => panic!("TSClient[Error]: {e}")
+    Err(e) => panic!("TSClient[Error] {e}")
   }
 }
+
+pub async fn discord_token() -> Token { Token::from_str(&token_path().await.main).expect("Serenity couldn't parse the bot token!") }

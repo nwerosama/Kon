@@ -1,5 +1,5 @@
 use {
-  asahi::{
+  asahi::utils::{
     format_duration,
     os::{
       format_bytes,

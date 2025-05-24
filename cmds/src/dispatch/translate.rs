@@ -272,10 +272,10 @@ static LOCALE_LOOKUP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::
 });
 
 fn prettify_lang(code: &str) -> String {
-  if let Ok(cache) = LOCALE_CACHE.read() {
-    if let Some(name) = cache.get(code) {
-      return name.clone();
-    }
+  if let Ok(cache) = LOCALE_CACHE.read()
+    && let Some(name) = cache.get(code)
+  {
+    return name.clone();
   }
 
   LOCALE_LOOKUP.get(code).map(|&s| s.to_string()).unwrap_or_else(|| code.to_string())

@@ -1,8 +1,9 @@
 [package]
 name = "kon_tokens"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
-tokenservice-client = { version = "0.4.3", registry = "gitea" }
+poise = { workspace = true }
+tokenservice-client = { version = "0.4.5", registry = "gitea" }
 tokio = { workspace = true }
